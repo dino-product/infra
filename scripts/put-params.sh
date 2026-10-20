@@ -33,14 +33,15 @@ put DATABASE_PASSWORD "$DB_PASSWORD"
 put AUTH_JWT_SECRET "$(openssl rand -base64 48)"                      # 32바이트 이상
 put APPLE_REFRESH_TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32)"   # base64 32바이트. 바꾸면 저장된 토큰을 못 읽는다
 
-# 임시 값 (10단계에서 실제 값으로 --overwrite)
+# 임시 값 (도메인 값 외에는 10단계 이후 실제 값으로 --overwrite)
 put KAKAO_ALLOWED_AUDIENCES "change-me"
 put APPLE_ALLOWED_AUDIENCES "change-me"
 put APPLE_TEAM_ID "change-me"
 put APPLE_KEY_ID "change-me"
 put APPLE_SERVICES_ID "change-me"
 put APPLE_PRIVATE_KEY "change-me"                                     # 실제 Apple 로그인 때 처음 읽는다 → .p8은 file://로 넣는다
-put APPLE_WEB_REDIRECT_URI "https://${ENV}-api.example.com/api/v1/auth/apple/callback"
+API_HOST=$([[ $ENV == prod ]] && echo api.orbi-t.com || echo dev-api.orbi-t.com)
+put APPLE_WEB_REDIRECT_URI "https://${API_HOST}/api/v1/auth/apple/callback"
 put APPLE_WEB_RETURN_URI "http://localhost:3000/auth/apple"           # 절대 URI여야 앱이 뜬다
 put APPLE_ANDROID_RETURN_URI "orbit://auth/apple"
 put CORS_ALLOWED_ORIGIN_PATTERNS "http://localhost:3000,http://localhost:5173"

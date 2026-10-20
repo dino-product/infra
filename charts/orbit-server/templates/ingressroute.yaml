@@ -1,0 +1,21 @@
+{{- if .Values.host }}
+# 원본 구간이 HTTP라 Traefik이 붙이는 X-Forwarded-Proto: http 를 https로 덮어쓴다 (앱이 리다이렉트 URL을 https로 만들도록)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata: { name: forwarded-https }
+spec:
+  headers:
+    customRequestHeaders: { X-Forwarded-Proto: https }
+---
+# Host와 CloudFront가 붙이는 비밀 헤더가 둘 다 맞아야 라우팅한다 (아니면 Traefik 404)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata: { name: orbit-server }
+spec:
+  entryPoints: [web]
+  routes:
+    - match: Host(`{{ .Values.host }}`) && Header(`X-Origin-Verify`, `{{ required "originVerify 필요: --set-string originVerify=$OV (10-3)" .Values.originVerify }}`)
+      kind: Rule
+      middlewares: [{ name: forwarded-https }]
+      services: [{ name: orbit-server, port: 8080 }]
+{{- end }}

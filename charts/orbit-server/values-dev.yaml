@@ -4,3 +4,4 @@ extraEnv:
   SPRINGDOC_SWAGGER_UI_ENABLED: "true"
   MANAGEMENT_METRICS_TAGS_ENVIRONMENT: dev
   LOGGING_APP_LEVEL: DEBUG
+host: dev-api.orbi-t.com
