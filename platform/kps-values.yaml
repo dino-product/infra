@@ -29,6 +29,15 @@ prometheus:
 grafana:
   admin: { existingSecret: grafana-admin }  # platform/grafana-secret.yaml
   defaultDashboardsTimezone: browser
+  # 공개 주소 grafana.dev.orbi-t.com (CloudFront → Traefik, platform/grafana-ingressroute.yaml)
+  # 차트 기본 grafana.ini(paths · log 등)에 덮어 합쳐진다. 가입 · 익명 접근은 막고 관리자 계정만 쓴다
+  grafana.ini:
+    server:
+      domain: grafana.dev.orbi-t.com
+      root_url: https://grafana.dev.orbi-t.com
+    security: { cookie_secure: true }
+    users: { allow_sign_up: false }
+    auth.anonymous: { enabled: false }
   # Alertmanager를 껐으니 자동으로 붙는 Alertmanager 데이터 소스도 뺀다 (없으면 Grafana에 연결 오류로 남는다)
   # 대시보드 · 데이터 소스 사이드카 2개(각 80~90Mi 실측)에도 한도를 건다
   sidecar:
