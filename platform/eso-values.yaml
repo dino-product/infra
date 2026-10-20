@@ -1,0 +1,6 @@
+# External Secrets Operator (chart 2.12.0). 메모리 4GB 노드라 작게
+resources: { requests: { cpu: 10m, memory: 64Mi }, limits: { memory: 128Mi } }
+webhook:
+  resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 64Mi } }
+certController:
+  resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 64Mi } }

@@ -1,0 +1,31 @@
+env: dev
+replicas: 1
+image:
+  repository: 714047901967.dkr.ecr.ap-northeast-2.amazonaws.com/orbit/server
+  tag: "" # 배포 때 --set image.tag=<SHA>
+springProfile: prod
+extraEnv: {}
+resources:
+  requests: { cpu: 200m, memory: 640Mi }
+  limits: { memory: 768Mi }
+secretKeys:
+  - DATABASE_URL
+  - DATABASE_USERNAME
+  - DATABASE_PASSWORD
+  - AUTH_JWT_SECRET
+  - KAKAO_ALLOWED_AUDIENCES
+  - APPLE_ALLOWED_AUDIENCES
+  - APPLE_TEAM_ID
+  - APPLE_KEY_ID
+  - APPLE_PRIVATE_KEY
+  - APPLE_REFRESH_TOKEN_ENCRYPTION_KEY
+  - APPLE_SERVICES_ID
+  - APPLE_WEB_REDIRECT_URI
+  - APPLE_WEB_RETURN_URI
+  - APPLE_ANDROID_RETURN_URI
+  - CORS_ALLOWED_ORIGIN_PATTERNS
+host: ""
+originVerify: ""
+serviceMonitor: { enabled: false }
+redis:
+  persistence: false # 14단계 prod에서 true ( AOF + PVC )

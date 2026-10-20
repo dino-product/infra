@@ -45,3 +45,19 @@ resource "aws_iam_role_policy" "etcd_snapshot" {
     ]
   })
 }
+
+# ESO가 노드 역할로 Parameter Store /orbit/dev/* 만 읽는다 (SecureString은 기본 키 aws/ssm이라 KMS 권한 불필요)
+resource "aws_iam_role_policy" "params_read" {
+  name = "params-read"
+  role = module.node.role_name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+        Resource = "arn:aws:ssm:ap-northeast-2:714047901967:parameter/orbit/dev/*"
+      },
+    ]
+  })
+}

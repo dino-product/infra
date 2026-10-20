@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis }
+spec:
+  replicas: 1
+  {{- if .Values.redis.persistence }}
+  strategy: { type: Recreate }
+  {{- end}}
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata: { labels: { app: redis}}
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          {{- if .Values.redis.persistence }}
+          args: ["--save", "", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "48mb", "--maxmemory-policy", "noeviction"]
+          {{- else }}
+          args: ["--save", "", "--appendonly", "no", "--maxmemory", "48mb", "--maxmemory-policy", "noeviction"]
+          {{- end }}
+          ports: [{ containerPort: 6379 }]
+          resources: { requests: { cpu: 10m, memory: "32Mi" }, limits: { memory: 64Mi } }
+          readinessProbe: { exec: { command: ["redis-cli", "ping"] }, periodSeconds: 5 }
+          {{- if .Values.redis.persistence }}
+          volumeMounts: [ { name: data, mountPath: /data } ]
+          {{- end}}
+      {{- if .Values.redis.persistence }}
+      volumes: [{ name: data, persistentVolumeClaim: { claimName: redis-data } }]
+      {{- end }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector: { app: redis}
+  ports: [{ port: 6379 }]
+{{- if .Values.redis.persistence }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  annotations: { helm.sh/resource-policy: keep } # helm uninstall로 지워지지 않게
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi }} # local-path ( 노드 디스크 )
+  {{- end }}
