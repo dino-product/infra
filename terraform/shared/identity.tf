@@ -13,14 +13,14 @@ locals {
 resource "aws_identitystore_group" "developers" {
   identity_store_id = local.identity_store_id
   display_name      = "Developers"
-  description       = "Orbit 팀원(개발자): 콘솔 조회 + dev 파라미터 읽기/쓰기 + dev 노드 포트 포워딩"
+  description       = "Orbit 팀원(개발자): 콘솔 조회 + dev 파라미터 읽기/쓰기 + dev RDS 포트 포워딩"
 }
 
 resource "aws_ssoadmin_permission_set" "dev_developer" {
   instance_arn = local.sso_instance_arn
   name         = "OrbitDevDeveloper"
   # 권한 세트 설명은 Latin-1 문자만 받는다 (한글 X)
-  description      = "Orbit dev developer: view-only console, /orbit/dev params rw, SSM port forwarding to dev node only"
+  description      = "Orbit dev developer: view-only console, /orbit/dev params rw, dev RDS port forwarding only"
   session_duration = "PT8H"
 }
 
@@ -73,14 +73,12 @@ resource "aws_ssoadmin_permission_set_inline_policy" "dev_developer" {
         }
       },
       {
-        # 허용 문서는 포트 포워딩 두 개뿐 (셸 X). 문서엔 태그가 없어 노드 태그 조건과 문을 나눈다
-        Sid    = "StartSessionPortForwardOnly"
-        Effect = "Allow"
-        Action = "ssm:StartSession"
-        Resource = [
-          "arn:aws:ssm:${local.region}::document/AWS-StartPortForwardingSession",
-          "arn:aws:ssm:${local.region}::document/AWS-StartPortForwardingSessionToRemoteHost",
-        ]
+        # 허용 문서는 dev RDS 고정 포트 포워딩 하나뿐 (셸 X, 범용 포워딩 X). 문서엔 태그가 없어 노드 태그 조건과 문을 나눈다
+        # 범용 문서(AWS-StartPortForwardingSession*)는 목적지를 마음대로 정할 수 있어 노드 localhost · IMDS까지 닿을 수 있다
+        Sid      = "StartSessionDevRdsOnly"
+        Effect   = "Allow"
+        Action   = "ssm:StartSession"
+        Resource = aws_ssm_document.dev_rds_port_forward.arn
         Condition = {
           BoolIfExists = { "ssm:SessionDocumentAccessCheck" = "true" }
         }
@@ -148,6 +146,33 @@ resource "aws_ssoadmin_permission_set_inline_policy" "dev_developer" {
         ]
       },
     ]
+  })
+}
+
+# 팀원용 포트 포워딩 문서: 목적지를 dev RDS:5432로 고정한다 (로컬 포트만 바꿀 수 있음)
+# 사용: aws ssm start-session --target <dev 노드 ID> --document-name Orbit-DevRdsPortForward
+resource "aws_ssm_document" "dev_rds_port_forward" {
+  name            = "Orbit-DevRdsPortForward"
+  document_type   = "Session"
+  document_format = "JSON"
+  content = jsonencode({
+    schemaVersion = "1.0"
+    description   = "Port forward to the Orbit dev RDS (PostgreSQL 5432) through the dev node"
+    sessionType   = "Port"
+    parameters = {
+      localPortNumber = {
+        type           = "String"
+        description    = "Local port on your machine"
+        allowedPattern = "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+        default        = "15432"
+      }
+    }
+    properties = {
+      type            = "LocalPortForwarding"
+      host            = aws_db_instance.main.address
+      portNumber      = "5432"
+      localPortNumber = "{{ localPortNumber }}"
+    }
   })
 }
 
