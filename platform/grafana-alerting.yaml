@@ -1,0 +1,151 @@
+# Grafana 알림을 코드로 둔다 (12-5): 연락처 · 기본 정책 · 규칙 5개
+# kps 설치 때 두 번째 values로 넘긴다: -f platform/kps-values.yaml -f platform/grafana-alerting.yaml
+# 파일로 프로비저닝한 항목은 UI에서 고칠 수 없다 → 이 파일을 고쳐 helm upgrade
+# Slack 웹훅 URL은 파일에 적지 않는다: Parameter Store → Secret grafana-alerting(grafana-secret.yaml) → 환경 변수
+grafana:
+  envFromSecrets:
+    - name: grafana-alerting
+  alerting:
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        - orgId: 1
+          name: slack-dev
+          receivers:
+            - uid: bg1su16fpd88wa
+              type: slack
+              settings:
+                url: ${SLACK_WEBHOOK_URL}
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: slack-dev
+          group_by: [grafana_folder, alertname]
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 4h
+    rules.yaml:
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: orbit-dev
+          folder: orbit
+          interval: 1m
+          # 쿼리(A)를 즉시 평가하고 임계값(C)으로 판정. 앱이 꺼져 데이터가 없으면 Normal(OK)
+          rules:
+            - uid: cg1sul5nmx69sf
+              title: 'orbit-server 다운'
+              condition: C
+              for: 2m
+              noDataState: OK
+              execErrState: Error
+              labels: { env: dev, severity: critical }
+              annotations: { summary: 'orbit-server 스크랩 대상이 2분 넘게 응답하지 않습니다' }
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: 'up{job="orbit-server"}'
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions: [{ evaluator: { type: lt, params: [1] } }]
+            - uid: eg1sul5wb2hhca
+              title: '5xx 비율 > 5%'
+              condition: C
+              for: 5m
+              noDataState: OK
+              execErrState: Error
+              labels: { env: dev, severity: critical }
+              annotations: { summary: '최근 5분 5xx 응답 비율이 5%를 넘었습니다' }
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: 'sum(rate(http_server_requests_seconds_count{job="orbit-server",status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{job="orbit-server"}[5m]))'
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions: [{ evaluator: { type: gt, params: [0.05] } }]
+            - uid: eg1sul629tr7ka
+              title: 'p95 > 1초'
+              condition: C
+              for: 10m
+              noDataState: OK
+              execErrState: Error
+              labels: { env: dev, severity: warning }
+              annotations: { summary: 'API 응답 시간 p95가 10분 넘게 1초를 넘었습니다' }
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job="orbit-server"}[5m])))'
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions: [{ evaluator: { type: gt, params: [1] } }]
+            - uid: eg1sul68b2xa8c
+              title: '노드 여유 메모리 < 10%'
+              condition: C
+              for: 10m
+              noDataState: OK
+              execErrState: Error
+              labels: { env: dev, severity: critical }
+              annotations: { summary: 'dev 노드 MemAvailable이 10% 아래입니다 (OOM 위험)' }
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: 'node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes'
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions: [{ evaluator: { type: lt, params: [0.1] } }]
+            - uid: fg1sul6e4uebkd
+              title: '디스크 사용률 > 80%'
+              condition: C
+              for: 10m
+              noDataState: OK
+              execErrState: Error
+              labels: { env: dev, severity: warning }
+              annotations: { summary: 'dev 노드 루트 디스크 사용률이 80%를 넘었습니다' }
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: '1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}'
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions: [{ evaluator: { type: gt, params: [0.8] } }]
