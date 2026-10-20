@@ -5,3 +5,4 @@ extraEnv:
   MANAGEMENT_METRICS_TAGS_ENVIRONMENT: dev
   LOGGING_APP_LEVEL: DEBUG
 host: dev-api.orbi-t.com
+serviceMonitor: { enabled: true }   # 12-4. /actuator/prometheus 무인증 공개(server HM-339) 전에는 타깃이 401로 DOWN

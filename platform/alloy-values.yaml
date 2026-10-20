@@ -1,0 +1,46 @@
+# Grafana Alloy (chart 1.14.0). Kubernetes API로 Pod 로그를 읽어 Loki로 보낸다 → DaemonSet · hostPath 불필요 (12-3)
+controller: { type: deployment, replicas: 1 }
+configReloader:
+  resources: { requests: { memory: 32Mi }, limits: { memory: 64Mi } }
+alloy:
+  resources: { requests: { memory: 96Mi }, limits: { memory: 192Mi } }
+  configMap:
+    content: |
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+      
+      // Pod 메타데이터를 Loki 라벨로 (라벨 수를 적게 유지: namespace · pod · container · app)
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+      
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+      }
+      
+      // kubelet API로 로그를 읽는다 → 노드 파일(hostPath) 마운트 불필요
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.local.receiver]
+      }
+      
+      loki.write "local" {
+        endpoint {
+          url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
+        }
+        external_labels = { env = "dev" }
+      }
