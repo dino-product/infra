@@ -50,6 +50,12 @@ EOF
 
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" sh -s - server
 
+# helm: 배포 job이 SSM으로 노드에서 deploy.sh를 실행할 때 쓴다 (11단계). 로컬과 같은 메이저(v4)로 고정
+HELM_VER=v4.3.1
+curl -sfSL "https://get.helm.sh/helm-${HELM_VER}-linux-arm64.tar.gz" | tar -xz -C /tmp linux-arm64/helm
+install -m 0755 /tmp/linux-arm64/helm /usr/local/bin/helm
+rm -rf /tmp/linux-arm64
+
 # 노드가 Ready가 될 때까지 최대 2분
 for _ in $(seq 1 24); do
   if k3s kubectl get node -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q True; then

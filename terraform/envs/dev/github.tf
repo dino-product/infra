@@ -60,3 +60,46 @@ resource "aws_iam_role_policy_attachment" "node_ecr_pull" {
   role       = module.node.role_name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"
 }
+
+# 노드는 배포 번들을 받기만
+resource "aws_iam_role_policy" "node_bundle_read" {
+  name = "bundle-read"
+  role = module.node.role_name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "arn:aws:s3:::${local.shared.deploy_bucket}/bundle/*"
+      },
+    ]
+  })
+}
+
+# Actions는 Env=dev 태그가 붙은 노드에만 AWS-RunShellScript 명령을 보내고 결과를 읽는다
+resource "aws_iam_role_policy" "gh_ssm_deploy" {
+  name = "ssm-deploy-dev"
+  role = aws_iam_role.gh_server_dev.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ssm:SendCommand"
+        Resource = "arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript"
+      },
+      {
+        Effect    = "Allow"
+        Action    = "ssm:SendCommand"
+        Resource  = "arn:aws:ec2:ap-northeast-2:714047901967:instance/*"
+        Condition = { StringEquals = { "ssm:resourceTag/Env" = "dev" } }
+      },
+      {
+        Effect   = "Allow"
+        Resource = "*"
+        Action   = ["ssm:ListCommandInvocations", "ssm:GetCommandInvocation", "ssm:DescribeInstanceInformation"]
+      },
+    ]
+  })
+}
