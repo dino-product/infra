@@ -1,4 +1,6 @@
-# prometheus-node-exporter (chart 4.60.1). job 라벨은 Service의 jobLabel(node-exporter) → 알림 · Alloy keep 규칙과 같다
+# prometheus-node-exporter (chart 4.60.1). job 라벨은 Service 라벨 jobLabel의 값 → 전(kube-prometheus-stack)과 같은 "node-exporter"
+service:
+  labels: { jobLabel: node-exporter }
 prometheus:
   monitor:
     enabled: true
