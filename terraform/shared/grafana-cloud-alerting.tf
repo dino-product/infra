@@ -86,6 +86,26 @@ locals {
       op       = "gt", threshold = 0, for = "15m"
       severity = "warning", summary = "Argo CD 앱 {{ $labels.name }}이 15분 넘게 Synced · Healthy가 아닙니다"
     }
+    # 실시간 갱신(SSE) 경보 3종: Notion "실시간 화면 갱신(SSE) 설계" 운영 고려사항. 파드마다 따로 알린다
+    # 연결 상한은 인스턴스 2,000 (app.realtime.connection 기본값). 바꾸면 여기 1400도 같이
+    "실시간 연결 > 70%" = {
+      expr     = "sum by (pod) (realtime_connections{cluster=\"orbit-dev\",job=\"orbit-server\"})"
+      op       = "gt", threshold = 1400, for = "5m"
+      severity = "warning", summary = "{{ $labels.pod }} 실시간 연결이 상한 2,000의 70%를 넘었습니다"
+    }
+    # 기동 · 종료 때 잠깐 0이 된다 → 수집 주기(60초) 두 번을 넘길 때만
+    "실시간 구독 끊김" = {
+      expr     = "min by (pod) (realtime_subscription_listening{cluster=\"orbit-dev\",job=\"orbit-server\"})"
+      op       = "lt", threshold = 1, for = "2m"
+      severity = "warning", summary = "{{ $labels.pod }}가 Redis 실시간 채널을 구독하지 않습니다 (화면은 60초 주기 조회로만 갱신)"
+    }
+    # 구독 여부는 연결이 끊겨도 1로 남는다 → 발행은 됐는데 받은 신호가 0인 파드를 찾는다
+    # 받은 적 없는 파드는 시계열이 없어 구독 지표로 0을 채운다. 지속 시간(15분)은 집계 구간(10분)보다 길게
+    "실시간 신호 미수신" = {
+      expr     = "((sum by (pod) (increase(realtime_signals_received_total{cluster=\"orbit-dev\",job=\"orbit-server\",result=\"delivered\"}[10m])) or 0 * max by (pod) (realtime_subscription_listening{cluster=\"orbit-dev\",job=\"orbit-server\"})) == bool 0) * on() group_left() (sum(increase(realtime_signals_published_total{cluster=\"orbit-dev\",job=\"orbit-server\",result=\"success\"}[10m])) > bool 0)"
+      op       = "gt", threshold = 0, for = "15m"
+      severity = "warning", summary = "{{ $labels.pod }}가 10분 동안 실시간 신호를 하나도 받지 못했습니다 (다른 파드는 발행 중)"
+    }
   }
 }
 
