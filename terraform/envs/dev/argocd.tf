@@ -24,6 +24,19 @@ resource "aws_ssm_parameter" "argocd_admin_bcrypt" {
   }
 }
 
+# GitHub 웹훅 비밀: infra 레포 push → Argo CD가 바로 새로 고침 (없으면 3분마다 확인)
+# 웹훅은 레포 설정에 한 번 등록한다 (주소 https://argocd.dev.orbi-t.com/api/webhook, 이 값을 Secret으로)
+resource "random_password" "argocd_webhook" {
+  length  = 32
+  special = false
+}
+
+resource "aws_ssm_parameter" "argocd_webhook_secret" {
+  name  = "/orbit/shared/ARGOCD_DEV_WEBHOOK_SECRET"
+  type  = "SecureString"
+  value = random_password.argocd_webhook.result
+}
+
 # infra 레포 배포 키 2개 (공개 키는 output → gh repo deploy-key add로 등록)
 # argocd_repo: Argo CD가 레포를 읽는다 (읽기 전용). ESO → Argo CD 레포 Secret (platform/argocd-repo-secret.yaml)
 resource "tls_private_key" "argocd_repo" {
