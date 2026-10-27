@@ -4,7 +4,7 @@ module "media" {
   source         = "../../modules/media-bucket"
   env            = "dev"
   node_role_name = module.node.role_name
-  # web_origins: 사무실 웹 dev 주소가 정해지면 추가 (예: ["https://dev.orbi-t.com"]). 비면 CORS 없음
+  web_origins    = ["https://dev.orbi-t.com"] # 사무실 웹(web.tf)이 서명 URL로 직접 올린다
 }
 
 output "media_bucket" {

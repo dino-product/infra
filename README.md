@@ -58,6 +58,18 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 </details>
 
 <details>
+<summary><b>웹 배포 흐름</b>: web 레포 main 머지 → 빌드 → S3 → CloudFront</summary>
+
+사무실 웹(dino-product/web, Vite SPA)은 정적 파일이라 클러스터를 거치지 않는다. `terraform/envs/dev/web.tf`
+
+1. **main 머지**: web 레포 `deploy-dev` 워크플로 시작
+2. **빌드**: `VITE_API_BASE_URL=https://dev-api.orbi-t.com` 으로 빌드 (API 는 교차 출처 → 서버 `CORS_ALLOWED_ORIGIN_PATTERNS` 에 웹 주소가 있다)
+3. **올리기**: OIDC 역할 `gh-web-dev` 로 S3 버킷 `orbit-web-dev-<계정>` 에 동기화. `assets/` 는 1년 immutable, `index.html` 은 no-cache
+4. **무효화**: CloudFront(`dev.orbi-t.com`, OAC 로 버킷을 읽음) 의 `index.html` 만 무효화. 없는 경로(403/404) 는 `index.html` 로 돌려 라우터가 처리
+
+</details>
+
+<details>
 <summary><b>관측 흐름</b>: Alloy → Grafana Cloud → Slack</summary>
 
 ![관측 흐름](docs/architecture/observe-flow.png)
@@ -74,7 +86,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 ```text
 terraform/
   shared/          계정 공통: VPC · RDS · ECR · DNS · 인증서 · SSO · Grafana Cloud
-  envs/dev/        dev 노드 · CloudFront · IAM · Argo CD 비밀 값
+  envs/dev/        dev 노드 · CloudFront · IAM · Argo CD 비밀 값 · 사무실 웹(S3 + CloudFront, web.tf)
   envs/prod/       prod 준비 코드 (노드 · 클러스터 없음)
   modules/node/    EC2 노드 모듈
   modules/media-bucket/  사진 버킷 모듈 (업로드 구역 · 보관 상한 · 삭제는 태그 + 수명 주기)
