@@ -1,6 +1,6 @@
 # Grafana Alloy (chart 1.14.0). 로그 · 지표를 모두 Grafana Cloud로 보낸다 (클러스터 안 Prometheus · Loki 없음)
 # 로그: Kubernetes API로 Pod 로그를 읽는다 → DaemonSet · hostPath 불필요 (12-3)
-# 지표: ServiceMonitor를 따라 직접 긁는다 (kps-values.yaml이 exporter · ServiceMonitor만 남긴다)
+# 지표: ServiceMonitor를 따라 직접 긁는다 (exporter 차트 · scrape-kubelet.yaml · 앱 차트가 만든다)
 controller: { type: deployment, replicas: 1 }
 configReloader:
   resources: { requests: { memory: 32Mi }, limits: { memory: 64Mi } }
@@ -86,7 +86,7 @@ alloy:
         external_labels = { cluster = "orbit-dev", env = "dev" }
       }
 
-      // kube-prometheus-stack · 앱 차트의 ServiceMonitor를 그대로 따른다 (job 라벨도 Prometheus와 같다)
+      // exporter 차트 · scrape-kubelet.yaml · 앱 차트의 ServiceMonitor를 그대로 따른다 (job 라벨도 Prometheus와 같다)
       // 무료 한도가 시계열 1만 개 · 분당 1회 기준이라 간격 60초 (ServiceMonitor에 간격이 있으면 그 값)
       prometheus.operator.servicemonitors "all" {
         forward_to = [prometheus.relabel.keep.receiver]
@@ -96,7 +96,7 @@ alloy:
       }
 
       // 보낼 지표만 남긴다: 앱(orbit-server)은 전부, 나머지는 알림 · 기본 대시보드에 쓰는 것만
-      // 큰 대상(apiserver 5만 · kubelet 자체 지표 6만)은 kps-values.yaml에서 ServiceMonitor부터 뺐다
+      // 큰 대상(apiserver 5만 · kubelet 자체 지표 6만)은 ServiceMonitor를 두지 않는다 (scrape-kubelet.yaml은 cAdvisor만)
       prometheus.relabel "keep" {
         forward_to = [prometheus.remote_write.cloud.receiver]
 
