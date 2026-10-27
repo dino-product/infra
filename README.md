@@ -65,7 +65,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 1. **지표 수집**: Alloy가 ServiceMonitor를 따라 60초마다 앱 · kube-state-metrics · node-exporter · cAdvisor를 긁는다
 2. **로그 수집**: Kubernetes API로 Pod 로그를 읽는다
 3. **전송**: 지표(원격 쓰기)와 로그를 Grafana Cloud로. 무료 한도 안 (약 850 시계열)
-4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 규칙 → Slack
+4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 · Argo CD 앱 상태 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
 
 </details>
 
@@ -77,6 +77,7 @@ terraform/
   envs/dev/        dev 노드 · CloudFront · IAM · Argo CD 비밀 값
   envs/prod/       prod 준비 코드 (노드 · 클러스터 없음)
   modules/node/    EC2 노드 모듈
+  modules/media-bucket/  사진 버킷 모듈 (업로드 구역 · 보관 상한 · 삭제는 태그 + 수명 주기)
 charts/orbit-server/   앱 차트. values-dev.yaml의 image.tag는 server CI가 커밋한다
 argocd/
   values.yaml      Argo CD 설치 값
@@ -125,3 +126,4 @@ dev 기준, 서울 리전 온디맨드 월 730시간.
 - 노드는 CloudFront를 거친 요청만 받는다. DB는 프라이빗 서브넷에 있다
 - 비밀 값은 Parameter Store에만 두고, Git에는 이름만 둔다
 - 이미지 태그는 커밋 SHA로 고정하고 덮어쓸 수 없다
+- 사진은 클라이언트가 서명 URL로 S3에 바로 올린다. 앱 권한에 객체 삭제가 없다
