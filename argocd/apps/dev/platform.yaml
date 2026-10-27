@@ -13,7 +13,7 @@ spec:
     targetRevision: main
     path: platform
     directory:
-      include: "{cluster-secret-store.yaml,grafana-cloud-secret.yaml,alloy-token.yaml,argocd-repo-secret.yaml,scrape-kubelet.yaml}"
+      include: "{cluster-secret-store.yaml,grafana-cloud-secret.yaml,argocd-repo-secret.yaml}"
   destination: { server: https://kubernetes.default.svc }
   syncPolicy:
     automated: { prune: true, selfHeal: true }

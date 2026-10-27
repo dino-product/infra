@@ -10,7 +10,7 @@ kubectl -n argocd get application kps >/dev/null 2>&1 && { echo "kps Application
 # 1) 릴리스 kps가 만든 것 (exporter 2개 · ServiceMonitor 4개 · RBAC)
 kubectl -n monitoring delete deploy,ds,svc,sa,servicemonitor -l app.kubernetes.io/instance=kps --ignore-not-found
 kubectl delete clusterrole,clusterrolebinding -l app.kubernetes.io/instance=kps --ignore-not-found
-# 2) operator가 만들었던 kubelet · etcd 수집 대상 (platform/scrape-kubelet.yaml이 대신한다)
+# 2) operator가 만들었던 kubelet · etcd 수집 대상 (Alloy가 노드를 찾아 직접 긁는다, alloy-values.yaml)
 kubectl -n kube-system delete svc,endpoints kps-kube-prometheus-stack-kubelet kps-kube-prometheus-stack-kube-etcd --ignore-not-found
 # 3) 쓰지 않는 Prometheus Operator CRD 9개 (servicemonitors는 남긴다). 이 종류의 객체는 없다
 kubectl delete crd alertmanagerconfigs.monitoring.coreos.com alertmanagers.monitoring.coreos.com podmonitors.monitoring.coreos.com \
