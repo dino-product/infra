@@ -26,6 +26,14 @@ secretKeys:
   - APPLE_WEB_RETURN_URI
   - APPLE_ANDROID_RETURN_URI
   - CORS_ALLOWED_ORIGIN_PATTERNS
+# terraform이 만드는 파라미터 (/orbit/<env>/<이름>, String). put-params.sh로 넣지 않는다 → 이름이 겹치지 않게 secretKeys와 따로 둔다
+#   MEDIA_*: terraform/modules/media-bucket (HM-353). 그 env의 terraform apply 전에 이 목록이 main에 올라가면
+#   Argo CD가 바로 동기화해 ExternalSecret이 실패한다 (orbit-server-env는 이전 값 그대로, 앱 Degraded)
+#   Secret이 바뀌어도 떠 있는 Pod의 환경 변수는 그대로 → 재시작(또는 다음 이미지 배포) 뒤에 들어간다
+tfParamKeys:
+  - MEDIA_BUCKET
+  - MEDIA_REGION
+  - MEDIA_RETENTION_MAX_DAYS
 host: ""
 serviceMonitor: { enabled: false }
 swaggerAuth: { enabled: false }   # Swagger를 켠 환경(dev)에서 기본 인증
