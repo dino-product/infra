@@ -4,6 +4,11 @@ image: { tag: a93399e0000334e032f6fd9fe0fe929ba98fb58d }
 # server의 dev 프로필(HM-351): 배포 공통(deployed) + Swagger 켬 · 앱 로그 DEBUG · 임시 어댑터 허용
 # 그래서 Swagger · 로그 · 지표 environment 태그를 환경 변수로 덮어쓰지 않는다
 springProfile: dev
+# 부하 측정(2026-10-27, server realtime-overload-plan.md 3·6절): 힙 상한 538MB + 힙 밖 200MB + 스레드 254개 스택이 768Mi를 넘어 OOMKilled
+# → 힙 55%(약 422MB, 실측 최대 352MB), 스레드 스택 512k. 톰캣 스레드 상한 60은 아래 extraEnv (SSE는 비동기라 스레드를 잡지 않는다)
+javaOpts: "-XX:MaxRAMPercentage=55 -Xss512k -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+extraEnv:
+  SERVER_TOMCAT_THREADS_MAX: "60"   # server.tomcat.threads.max. 측정으로 정한 값이 server 설정에 들어가면 여기서 뺀다
 # dev 노드(4GB)는 Argo CD까지 올라가 여유 메모리가 20% 안팎 → 배포 때 Pod 2개를 띄우지 않고 이전 Pod를 먼저 내린다 (1~2분 끊김)
 rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com

@@ -54,6 +54,7 @@ resource "grafana_folder" "orbit" {
 # 스택은 prod와 같이 쓸 것이라 쿼리마다 cluster를 건다 (Alloy external_labels)
 locals {
   no_data_alerting = ["orbit-server 다운"]
+  # OOM 규칙은 "지속"이 아니라 "발생" → 평가 즉시 알린다 (for 0)
 
   dev_rules = {
     "orbit-server 다운" = {
@@ -85,6 +86,25 @@ locals {
       expr     = "max by (name) (argocd_app_info{cluster=\"orbit-dev\",health_status!~\"Healthy|Progressing\"} or argocd_app_info{cluster=\"orbit-dev\",sync_status!=\"Synced\"})"
       op       = "gt", threshold = 0, for = "15m"
       severity = "warning", summary = "Argo CD 앱 {{ $labels.name }}이 15분 넘게 Synced · Healthy가 아닙니다"
+    }
+    # 과부하 징후 3종 — 이름은 기존 규칙 뒤로 정렬되게 "포화 징후:" 접두 (2026-10-27 부하 측정에서 OOMKilled 17회가 났는데 "다운" 알림만 울렸다)
+    # 컨테이너 한도 OOM도 커널 oom_kill 카운터에 잡힌다 (node-exporter vmstat)
+    "포화 징후: OOM 발생" = {
+      expr     = "increase(node_vmstat_oom_kill{cluster=\"orbit-dev\"}[10m])"
+      op       = "gt", threshold = 0, for = "0s"
+      severity = "critical", summary = "dev 노드에서 최근 10분 사이 OOM kill이 {{ $value }}회 났습니다 (어느 컨테이너인지는 kubectl get pods · last state)"
+    }
+    # 풀 10개가 다 잡힌 채 기다리는 요청 수. 과부하 측정 때 최대 197 → 5가 2분이면 이미 포화 초입
+    "포화 징후: DB 커넥션 대기" = {
+      expr     = "max(hikaricp_connections_pending{cluster=\"orbit-dev\",job=\"orbit-server\"})"
+      op       = "gt", threshold = 5, for = "2m"
+      severity = "warning", summary = "orbit-server가 DB 커넥션을 기다리는 요청이 2분 넘게 5개를 넘습니다 (풀 포화 → 스레드 · 메모리 누적)"
+    }
+    # 앱 CPU 한도(1500m)가 있어도 노드 전체가 90%를 넘으면 etcd · kubelet이 느려진다
+    "포화 징후: 노드 CPU > 90%" = {
+      expr     = "1 - avg(rate(node_cpu_seconds_total{cluster=\"orbit-dev\",mode=\"idle\"}[5m]))"
+      op       = "gt", threshold = 0.9, for = "10m"
+      severity = "warning", summary = "dev 노드 CPU 사용률이 10분 넘게 90%를 넘었습니다 (t4g 버스트 초과 요금 · 제어부 지연)"
     }
     # 실시간 갱신(SSE) 경보 3종: Notion "실시간 화면 갱신(SSE) 설계" 운영 고려사항. 파드마다 따로 알린다
     # 연결 상한은 인스턴스 2,000 (app.realtime.connection 기본값). 바꾸면 여기 1400도 같이
