@@ -41,7 +41,31 @@ alloy:
       // kubelet API로 로그를 읽는다 → 노드 파일(hostPath) 마운트 불필요
       loki.source.kubernetes "pods" {
         targets    = discovery.relabel.pods.output
+        forward_to = [loki.process.mask.receiver]
+      }
+
+      // 로그는 국외(도쿄)에 저장된다 → 보내기 전에 개인정보 · 자격 증명을 가린다 (괄호 안만 바뀐다)
+      // 앱은 이런 값을 남기지 않게 짜여 있고, 이건 실수 대비. Argo CD · dex 로그에는 로그인 이메일이 찍힌다
+      // git@github.com 같은 SSH 주소도 <email>로 가려진다 (RE2라 예외를 둘 수 없다)
+      loki.process "mask" {
         forward_to = [loki.write.cloud.receiver]
+
+        stage.replace {
+          expression = `([A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})`
+          replace    = "<email>"
+        }
+        stage.replace {
+          expression = `\b(01[016789][-. ]?[0-9]{3,4}[-. ]?[0-9]{4})\b`
+          replace    = "<phone>"
+        }
+        stage.replace {
+          expression = `(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*)`
+          replace    = "<jwt>"
+        }
+        stage.replace {
+          expression = `(?i)bearer\s+([A-Za-z0-9._~+/=-]+)`
+          replace    = "<token>"
+        }
       }
 
       loki.write "cloud" {
