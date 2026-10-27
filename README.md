@@ -49,7 +49,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 1. **develop 머지**: server 레포 배포 워크플로 시작
 2. **빌드**: OIDC로 AWS 역할을 받아 arm64 이미지를 ECR에 커밋 SHA 태그로 push
 3. **태그 커밋**: 이 레포 `charts/orbit-server/values-dev.yaml`의 `image.tag`를 바꿔 커밋
-4. **Argo CD 감지**: 약 3분마다 main을 확인하고 차트를 렌더링
+4. **Argo CD 감지**: GitHub 웹훅으로 바로 알고 차트를 렌더링 (웹훅이 실패해도 3분마다 확인)
 5. **동기화**: 바뀐 Deployment를 클러스터에 적용
 6. **Secret 준비**: External Secrets가 Parameter Store 값으로 Secret을 만든다
 7. **이미지 받기**: kubelet이 노드 역할로 ECR에서 pull
@@ -63,7 +63,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 ![관측 흐름](docs/architecture/observe-flow.png)
 
 1. **지표 수집**: Alloy가 ServiceMonitor를 따라 60초마다 앱 · kube-state-metrics · node-exporter · cAdvisor를 긁는다
-2. **로그 수집**: Kubernetes API로 Pod 로그를 읽는다
+2. **로그 수집**: Kubernetes API로 Pod 로그를 읽고, 이메일 · 전화번호 · 토큰은 보내기 전에 가린다
 3. **전송**: 지표(원격 쓰기)와 로그를 Grafana Cloud로. 무료 한도 안 (약 850 시계열)
 4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 · Argo CD 앱 상태 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
 
