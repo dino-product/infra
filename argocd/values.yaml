@@ -7,9 +7,23 @@ global:
 configs:
   params:
     server.insecure: true         # TLS는 CloudFront에서 끝난다 (원본 구간 HTTP, api와 같은 방식)
+    # 앱 6개 · 노드 1개라 동시 처리 수를 기본(20 · 10)보다 낮춘다 → 동기화 때 메모리 · CPU 피크가 작아진다
+    controller.status.processors: 4
+    controller.operation.processors: 2
+    controller.kubectl.parallelism.limit: 4
   cm:
     admin.enabled: true           # 비상용 로컬 계정 (비밀번호 /orbit/shared)
     exec.enabled: false
+    # 컨트롤러는 클러스터의 모든 리소스 종류를 감시(watch)해 캐시에 둔다 → 종류마다 메모리. 쓰지 않는 CRD 그룹은 뺀다
+    # (Traefik Hub · Gateway API: k3s가 설치만 함 / ESO generators: 안 씀 / Prometheus Operator: ServiceMonitor만 씀)
+    # 2026-10-27 설치 때 컨트롤러가 한도 512Mi에 걸려 OOMKilled 4회 → 이 목록 + GOMEMLIMIT으로 대응
+    resourceExclusionsAdditional:
+      - apiGroups: [hub.traefik.io, gateway.networking.k8s.io, generators.external-secrets.io, events.k8s.io]
+        kinds: ["*"]
+      - apiGroups: [""]
+        kinds: [Event]
+      - apiGroups: [monitoring.coreos.com]
+        kinds: [Alertmanager, AlertmanagerConfig, PodMonitor, Probe, Prometheus, PrometheusAgent, PrometheusRule, ScrapeConfig, ThanosRuler]
     # 팀원은 GitHub로 로그인한다. dino-product 조직원만 들어올 수 있다
     # clientSecret은 argocd-secret의 dex.github.clientSecret (설치 스크립트가 /orbit/shared에서 넣는다)
     dex.config: |
@@ -35,6 +49,8 @@ applicationSet: { replicas: 0 }
 
 controller:
   resources: { requests: { cpu: 50m, memory: 192Mi }, limits: { memory: 512Mi } }
+  # Go 런타임이 이 값 근처에서 GC를 더 자주 돌린다 → 한도(512Mi)까지 자라서 죽는 대신 느려진다
+  env: [{ name: GOMEMLIMIT, value: 400MiB }]
   # 앱 동기화 · 상태 지표(argocd_app_info) → Alloy가 ServiceMonitor를 따라 긁는다 → "배포 상태 이상 (Argo CD)" 알림
   metrics:
     enabled: true
@@ -42,6 +58,7 @@ controller:
 repoServer:
   # kube-prometheus-stack 렌더링(CRD 포함)이 커서 한도를 넉넉히
   resources: { requests: { cpu: 20m, memory: 96Mi }, limits: { memory: 512Mi } }
+  env: [{ name: GOMEMLIMIT, value: 400MiB }]
 server:
   resources: { requests: { cpu: 20m, memory: 64Mi }, limits: { memory: 192Mi } }
 redis:

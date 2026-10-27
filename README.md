@@ -75,9 +75,9 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 ![관측 흐름](docs/architecture/observe-flow.png)
 
 1. **지표 수집**: Alloy가 ServiceMonitor를 따라 60초마다 앱 · kube-state-metrics · node-exporter · cAdvisor를 긁는다
-2. **로그 수집**: Kubernetes API로 Pod 로그를 읽고, 이메일 · 전화번호 · 토큰은 보내기 전에 가린다
+2. **로그 수집**: Kubernetes API로 Pod 로그를 읽고(kube-system · monitoring 제외), 이메일 · 전화번호 · 토큰은 보내기 전에 가린다
 3. **전송**: 지표(원격 쓰기)와 로그를 Grafana Cloud로. 무료 한도 안 (약 850 시계열)
-4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 · Argo CD 앱 상태 · 실시간(SSE) 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
+4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 · Argo CD 앱 상태 · 실시간(SSE) · 포화 징후(OOM · DB 커넥션 대기 · 노드 CPU) 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
 
 </details>
 
@@ -129,7 +129,11 @@ dev 기준, 서울 리전 온디맨드 월 730시간.
 | CloudFront · Grafana Cloud | 무료 범위 | $0 |
 | **합계** | | **약 $61** |
 
-노드 메모리 (4GiB, 실측): k3s server 약 1.2GB, 앱 약 300Mi, Argo CD 약 380Mi, Alloy 약 130Mi, 나머지 시스템 Pod 약 275Mi. 여유 약 27%.
+노드 메모리 (3.8GiB, 2026-10-28 실측): k3s server 약 1.3GB, 앱 약 430Mi(부하 때 768Mi 한도까지), Argo CD 약 520Mi(컨트롤러 414Mi), Alloy 약 115Mi, 나머지 시스템 Pod 약 300Mi. 여유 약 19%.
+
+노드 예약(`scripts/install-k3s.sh` kubelet-arg): kube-reserved 1Gi + system-reserved 256Mi + 축출 기준 200Mi → Pod용 메모리 약 2.3GiB, pods cgroup 한도 약 2.5GiB. Pod 전체가 k3s · etcd 메모리를 밀어내지 못하고, 요청 합이 2.3GiB를 넘으면 스케줄되지 않는다 (prod를 같은 노드에 올릴 때 걸린다).
+
+**앱 Pod 한도(768Mi)는 올리지 않는다.** 올리면 부하 때 노드 여유가 사라져 "Pod 재시작"이 "노드 위험"이 된다. 대신 한도 안에서 힙 비율 · 스레드 수를 조정하고(`values-dev.yaml` javaOpts), 넘치는 요청은 앱이 거절한다(server 레포).
 
 ## 보안 원칙
 

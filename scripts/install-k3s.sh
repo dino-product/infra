@@ -28,6 +28,14 @@ etcd-s3: true                      # 액세스 키 없음 → 노드 IAM 역할�
 etcd-s3-bucket: orbit-etcd-${ACCOUNT_ID}
 etcd-s3-region: ap-northeast-2
 etcd-s3-folder: ${ENV}
+# 노드 예약: k3s 서버(제어부 + 내장 etcd, 실측 약 1.3GB)와 OS 몫을 Pod가 못 쓰게 한다
+#   - 스케줄러가 보는 Pod용 메모리 = 3.8GiB - 1Gi - 256Mi - 200Mi ≈ 2.3GiB (요청 합이 이걸 넘으면 Pod가 Pending → prod를 같은 노드에 올릴 때 신호)
+#   - kubelet이 pods cgroup에 한도(capacity - 예약)를 걸어 Pod 전체가 k3s 메모리를 밀어내지 못한다 (2026-10-27 부하 때 스왑 900MiB가 이 경우)
+#   - memory.available < 200Mi면 요청보다 많이 쓰는 Pod부터 축출한다 (커널 OOM보다 먼저, 깔끔하게)
+kubelet-arg:
+  - "kube-reserved=cpu=300m,memory=1Gi"
+  - "system-reserved=cpu=100m,memory=256Mi"
+  - "eviction-hard=memory.available<200Mi,nodefs.available<5%,imagefs.available<5%"
 EOF
 
 # ECR 자격 증명 플러그인: k3s가 시작할 때 이 두 경로가 있으면 kubelet에 붙인다 (7단계)

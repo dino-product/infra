@@ -7,9 +7,13 @@ image:
   tag: "" # 환경별 values-<env>.yaml. server 레포 deploy job이 커밋으로 바꾼다 (Argo CD가 반영)
 springProfile: prod
 extraEnv: {}
+# JVM 메모리 배분. 컨테이너 한도 안에서 힙 비율만 정한다 (한도를 올리면 노드 전체가 위험 → README "비용과 용량")
+# 힙 밖(메타스페이스 · 코드 캐시 · 스레드 스택 · 버퍼)이 실측 약 200MB라 70%면 768Mi를 넘길 수 있다 → 환경별 values에서 낮춘다
+javaOpts: "-XX:MaxRAMPercentage=70 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 resources:
   requests: { cpu: 200m, memory: 640Mi }
-  limits: { memory: 768Mi }
+  # cpu 한도: 노드 2 vCPU 중 k3s · etcd · Alloy 몫(약 0.5)을 남긴다. 과부하 때 앱이 느려지는 대신 제어부가 안 죽는다
+  limits: { cpu: 1500m, memory: 768Mi }
 secretKeys:
   - DATABASE_URL
   - DATABASE_USERNAME

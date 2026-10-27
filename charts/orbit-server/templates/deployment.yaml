@@ -29,7 +29,7 @@ spec:
             - { name: SPRING_PROFILES_ACTIVE, value: {{ .Values.springProfile | quote }} }
             - { name: REDIS_HOST, value: redis }
             - { name: REDIS_PORT, value: "6379" }
-            - { name: JAVA_OPTS, value: "-XX:MaxRAMPercentage=70 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError" }
+            - { name: JAVA_OPTS, value: {{ .Values.javaOpts | quote }} }
             {{- range $k, $v := .Values.extraEnv }}
             - { name: {{ $k }}, value: {{ $v | quote }} }
             {{- end }}
@@ -42,15 +42,20 @@ spec:
               port: mgmt
             periodSeconds: 5
             failureThreshold: 36 # 최대 3분
+          # 과부하로 CPU가 포화되면 관리 포트 응답도 1초(기본 timeout)를 넘긴다 → 그때 kubelet이 죽이면 재연결 폭주로 더 나빠진다
+          # timeout 3초 · 연속 5번(50초) 실패일 때만 죽인다. readiness는 잠깐 트래픽에서 빼는 것이라 기본 3번
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: mgmt
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: mgmt
             periodSeconds: 5
+            timeoutSeconds: 3
           lifecycle:
             preStop: { exec: { command: ["sh", "-c", "sleep 5"] } } # 엔드포인트에서 빠질 시간
