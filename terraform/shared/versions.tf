@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = "~> 4.51"
+    }
   }
   backend "s3" {
     bucket       = "orbit-tfstate-714047901967"
