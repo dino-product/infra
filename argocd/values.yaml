@@ -8,18 +8,28 @@ configs:
   params:
     server.insecure: true         # TLS는 CloudFront에서 끝난다 (원본 구간 HTTP, api와 같은 방식)
   cm:
-    admin.enabled: true
-    accounts.team: login          # 팀원 공용 계정 (비밀번호 /orbit/dev/ARGOCD_TEAM_PASSWORD)
+    admin.enabled: true           # 비상용 로컬 계정 (비밀번호 /orbit/shared)
     exec.enabled: false
+    # 팀원은 GitHub로 로그인한다. dino-product 조직원만 들어올 수 있다
+    # clientSecret은 argocd-secret의 dex.github.clientSecret (설치 스크립트가 /orbit/shared에서 넣는다)
+    dex.config: |
+      connectors:
+        - type: github
+          id: github
+          name: GitHub
+          config:
+            clientID: Ov23liPcuPDLbQkYEzlV   # 조직 OAuth 앱 "Orbit Argo CD (dev)" (공개해도 되는 값)
+            clientSecret: $dex.github.clientSecret
+            orgs:
+              - name: dino-product
   rbac:
-    # 로그인하면 기본은 읽기 전용. team은 앱 동기화 · 새로 고침까지
-    policy.default: role:readonly
+    # GitHub로 로그인한 조직원은 조회 + 앱 동기화 · 새로 고침까지 (설정 변경 · 삭제는 admin만)
+    policy.default: role:team
     policy.csv: |
       p, role:team, applications, sync, */*, allow
-      g, team, role:team
-  # 비밀번호 해시(admin · team)는 설치 스크립트가 --set-string으로 넣는다
+      g, role:team, role:readonly
+  # admin 비밀번호 해시와 GitHub OAuth 앱 비밀은 설치 스크립트가 --set-string으로 넣는다
 
-dex: { enabled: false }           # SSO 없음 (로컬 계정만)
 notifications: { enabled: false }
 applicationSet: { replicas: 0 }
 
@@ -32,3 +42,5 @@ server:
   resources: { requests: { cpu: 20m, memory: 64Mi }, limits: { memory: 192Mi } }
 redis:
   resources: { requests: { cpu: 10m, memory: 24Mi }, limits: { memory: 64Mi } }
+dex:
+  resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 96Mi } }

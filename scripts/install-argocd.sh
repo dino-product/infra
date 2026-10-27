@@ -10,14 +10,14 @@ CHART_VERSION=10.11.6
 get() { aws ssm get-parameter --region ap-northeast-2 --with-decryption \
   --name "$1" --query Parameter.Value --output text; }
 ADMIN_HASH=$(get /orbit/shared/ARGOCD_DEV_ADMIN_BCRYPT)
-TEAM_HASH=$(get /orbit/shared/ARGOCD_DEV_TEAM_BCRYPT)
+GITHUB_SECRET=$(get /orbit/shared/ARGOCD_DEV_GITHUB_CLIENT_SECRET)   # GitHub OAuth 앱 (팀원 로그인)
 
 helm repo add argo https://argoproj.github.io/argo-helm >/dev/null 2>&1 || true
 helm repo update argo >/dev/null
 helm upgrade --install argocd argo/argo-cd --version "$CHART_VERSION" \
   -n argocd --create-namespace -f argocd/values.yaml \
   --set-string "configs.secret.argocdServerAdminPassword=${ADMIN_HASH}" \
-  --set-string "configs.secret.extra.accounts\.team\.password=${TEAM_HASH}" \
+  --set-string "configs.secret.extra.dex\.github\.clientSecret=${GITHUB_SECRET}" \
   --rollback-on-failure --timeout 10m
 
 # 레포 접근 키(ESO)를 먼저 만들고 루트 앱을 건다. 이후 platform 앱이 이 ExternalSecret을 넘겨받는다
