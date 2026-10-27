@@ -1,0 +1,19 @@
+# platform/의 매니페스트 중 클러스터에 직접 적용하는 것 (나머지 *-values.yaml은 helm 값이라 제외)
+# ORIGIN_VERIFY가 들어가는 edge-dev.yaml은 Git에 값을 둘 수 없어 scripts/apply-edge.sh로 따로 적용한다
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+  annotations: { argocd.argoproj.io/sync-wave: "-1" }
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:dino-product/infra.git
+    targetRevision: main
+    path: platform
+    directory:
+      include: "{cluster-secret-store.yaml,grafana-cloud-secret.yaml,alloy-token.yaml,argocd-repo-secret.yaml}"
+  destination: { server: https://kubernetes.default.svc }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

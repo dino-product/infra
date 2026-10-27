@@ -1,5 +1,5 @@
 {{- if .Values.serviceMonitor.enabled }}
-# Prometheus(kube-prometheus-stack)가 관리 포트 9090의 /actuator/prometheus를 긁는다 (12-4)
+# Alloy가 관리 포트 9090의 /actuator/prometheus를 긁어 Grafana Cloud로 보낸다 (12-4)
 # 관리 포트는 Service에만 있고 IngressRoute(8080)로는 밖에 나가지 않는다
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -11,6 +11,6 @@ spec:
   endpoints:
     - port: mgmt
       path: /actuator/prometheus
-      interval: 30s
+      interval: 60s   # Grafana Cloud 무료 한도(분당 1회) 기준. Alloy가 이 ServiceMonitor를 따라 긁는다
       scrapeTimeout: 10s
 {{- end }}

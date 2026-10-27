@@ -1,0 +1,34 @@
+# Argo CD (chart argo/argo-cd 10.11.6, v3.5.6). 설치 · 업그레이드는 scripts/install-argocd.sh
+# dev 노드 하나(4GB)라 쓰지 않는 컴포넌트는 끄고 한도를 건다
+# Argo CD 자신은 Argo CD로 관리하지 않는다 (비밀번호 해시를 설치 스크립트가 SSM에서 넣는다)
+global:
+  domain: argocd.dev.orbi-t.com   # 공개 주소: CloudFront → Traefik (platform/edge-dev.yaml)
+
+configs:
+  params:
+    server.insecure: true         # TLS는 CloudFront에서 끝난다 (원본 구간 HTTP, api와 같은 방식)
+  cm:
+    admin.enabled: true
+    accounts.team: login          # 팀원 공용 계정 (비밀번호 /orbit/dev/ARGOCD_TEAM_PASSWORD)
+    exec.enabled: false
+  rbac:
+    # 로그인하면 기본은 읽기 전용. team은 앱 동기화 · 새로 고침까지
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:team, applications, sync, */*, allow
+      g, team, role:team
+  # 비밀번호 해시(admin · team)는 설치 스크립트가 --set-string으로 넣는다
+
+dex: { enabled: false }           # SSO 없음 (로컬 계정만)
+notifications: { enabled: false }
+applicationSet: { replicas: 0 }
+
+controller:
+  resources: { requests: { cpu: 50m, memory: 192Mi }, limits: { memory: 512Mi } }
+repoServer:
+  # kube-prometheus-stack 렌더링(CRD 포함)이 커서 한도를 넉넉히
+  resources: { requests: { cpu: 20m, memory: 96Mi }, limits: { memory: 512Mi } }
+server:
+  resources: { requests: { cpu: 20m, memory: 64Mi }, limits: { memory: 192Mi } }
+redis:
+  resources: { requests: { cpu: 10m, memory: 24Mi }, limits: { memory: 64Mi } }

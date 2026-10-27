@@ -1,0 +1,20 @@
+# kube-prometheus-stack: exporter(node · kube-state-metrics) · ServiceMonitor · CRD만 (Prometheus · Grafana는 Grafana Cloud로)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: kps, namespace: argocd }
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.10.1
+      helm:
+        releaseName: kps
+        valueFiles: [$values/platform/kps-values.yaml]
+    - repoURL: git@github.com:dino-product/infra.git
+      targetRevision: main
+      ref: values
+  destination: { server: https://kubernetes.default.svc, namespace: monitoring }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]   # CRD가 커서 SSA

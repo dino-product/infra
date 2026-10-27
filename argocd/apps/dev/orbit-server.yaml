@@ -1,0 +1,18 @@
+# orbit-server (dev). 이미지 태그는 charts/orbit-server/values-dev.yaml의 image.tag
+# server 레포 deploy-dev가 develop 빌드 후 그 태그를 main에 커밋하면 Argo CD가 반영한다
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: orbit-server, namespace: argocd }
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:dino-product/infra.git
+    targetRevision: main
+    path: charts/orbit-server
+    helm:
+      releaseName: orbit-server
+      valueFiles: [values-dev.yaml]
+  destination: { server: https://kubernetes.default.svc, namespace: orbit-dev }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

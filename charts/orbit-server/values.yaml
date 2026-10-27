@@ -2,7 +2,7 @@ env: dev
 replicas: 1
 image:
   repository: 714047901967.dkr.ecr.ap-northeast-2.amazonaws.com/orbit/server
-  tag: "" # 배포 때 --set image.tag=<SHA>
+  tag: "" # 환경별 values-<env>.yaml (Argo CD) 또는 deploy.sh --set image.tag=<SHA>
 springProfile: prod
 extraEnv: {}
 resources:
