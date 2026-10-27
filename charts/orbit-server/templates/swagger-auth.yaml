@@ -1,0 +1,24 @@
+{{- if .Values.swaggerAuth.enabled }}
+# Swagger(/docs · /swagger-ui · /docs-json)에만 거는 기본 인증. 라우트는 platform/edge-<env>.yaml
+# htpasswd 줄은 Parameter Store /orbit/<env>/SWAGGER_HTPASSWD (terraform/envs/<env>/swagger.tf)
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata: { name: swagger-auth }
+spec:
+  refreshInterval: 1h
+  secretStoreRef: { kind: ClusterSecretStore, name: aws-parameter-store }
+  data:
+    - secretKey: users
+      remoteRef: { key: /orbit/{{ .Values.env }}/SWAGGER_HTPASSWD }
+  target: { name: swagger-auth }
+---
+# 인증 헤더는 앱으로 넘기지 않는다 (앱은 Bearer 토큰을 쓴다)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata: { name: swagger-auth }
+spec:
+  basicAuth:
+    secret: swagger-auth
+    realm: orbit-dev-docs
+    removeHeader: true
+{{- end }}

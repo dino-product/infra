@@ -8,3 +8,4 @@ springProfile: dev
 rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com
 serviceMonitor: { enabled: true }   # 12-4. /actuator/prometheus 무인증 공개(server HM-339) 전에는 타깃이 401로 DOWN
+swaggerAuth: { enabled: true }      # dev는 Swagger가 켜져 있다 → 기본 인증 (사용자 orbit, /orbit/dev/SWAGGER_PASSWORD)

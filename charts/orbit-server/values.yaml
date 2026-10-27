@@ -28,5 +28,6 @@ secretKeys:
   - CORS_ALLOWED_ORIGIN_PATTERNS
 host: ""
 serviceMonitor: { enabled: false }
+swaggerAuth: { enabled: false }   # Swagger를 켠 환경(dev)에서 기본 인증
 redis:
   persistence: false # 14단계 prod에서 true ( AOF + PVC )

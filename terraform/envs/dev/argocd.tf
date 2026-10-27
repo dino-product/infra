@@ -1,13 +1,9 @@
 # Argo CD (dev 클러스터) 비밀값. 설치 · 앱 정의는 scripts/install-argocd.sh · argocd/
 #
-# 계정 2개: admin(관리자, 값은 /orbit/shared → 팀원 권한 밖) · team(팀원, 읽기 + 동기화, 값은 /orbit/dev)
+# 팀원은 GitHub 로그인(dino-product 조직원, argocd/values.yaml dex). 로컬 계정은 비상용 admin 하나
+# admin 값은 /orbit/shared → 팀원 권한 밖. GitHub OAuth 앱 비밀은 /orbit/shared/ARGOCD_DEV_GITHUB_CLIENT_SECRET (콘솔에서 넣음)
 # Argo CD는 bcrypt 해시를 받는다. bcrypt()는 실행마다 값이 달라서 처음 한 번만 넣고 이후 변경은 무시한다
 resource "random_password" "argocd_admin" {
-  length  = 24
-  special = false
-}
-
-resource "random_password" "argocd_team" {
   length  = 24
   special = false
 }
@@ -25,22 +21,6 @@ resource "aws_ssm_parameter" "argocd_admin_bcrypt" {
   lifecycle {
     ignore_changes       = [value]
     replace_triggered_by = [random_password.argocd_admin]
-  }
-}
-
-resource "aws_ssm_parameter" "argocd_team_password" {
-  name  = "/orbit/dev/ARGOCD_TEAM_PASSWORD"
-  type  = "SecureString"
-  value = random_password.argocd_team.result
-}
-
-resource "aws_ssm_parameter" "argocd_team_bcrypt" {
-  name  = "/orbit/shared/ARGOCD_DEV_TEAM_BCRYPT"
-  type  = "SecureString"
-  value = bcrypt(random_password.argocd_team.result)
-  lifecycle {
-    ignore_changes       = [value]
-    replace_triggered_by = [random_password.argocd_team]
   }
 }
 

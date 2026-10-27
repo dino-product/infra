@@ -4,3 +4,8 @@
 *.tfplan
 crash.log
 .DS_Store
+# 로컬 설정 · 자격 증명
+.idea/
+*.tfvars
+*.pem
+kubeconfig*
