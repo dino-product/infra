@@ -48,13 +48,17 @@ resource "grafana_folder" "orbit" {
   title    = "orbit"
 }
 
-# 쿼리(A)를 즉시 평가하고 임계값(C)으로 판정. 앱이 꺼져 데이터가 없으면 Normal(OK)
+# 쿼리(A)를 즉시 평가하고 임계값(C)으로 판정. 데이터가 없으면 Normal(OK)
+# 예외: 다운 규칙은 데이터가 없어도 알린다. 노드가 죽으면 Alloy도 같이 죽어 지표가 끊기기 때문
+#   → dev 노드를 일부러 끌 때는 Grafana Cloud에서 사일런스를 건다
 # 스택은 prod와 같이 쓸 것이라 쿼리마다 cluster를 건다 (Alloy external_labels)
 locals {
+  no_data_alerting = ["orbit-server 다운"]
+
   dev_rules = {
     "orbit-server 다운" = {
       expr     = "up{cluster=\"orbit-dev\",job=\"orbit-server\"}", op = "lt", threshold = 1, for = "2m"
-      severity = "critical", summary = "orbit-server 스크랩 대상이 2분 넘게 응답하지 않습니다"
+      severity = "critical", summary = "orbit-server가 2분 넘게 응답하지 않거나 지표가 끊겼습니다 (노드 · Alloy 다운 포함)"
     }
     "5xx 비율 > 5%" = {
       expr     = "sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\"}[5m]))"
@@ -76,6 +80,12 @@ locals {
       op       = "gt", threshold = 0.8, for = "10m"
       severity = "warning", summary = "dev 노드 루트 디스크 사용률이 80%를 넘었습니다"
     }
+    # 앱마다 하나씩 알린다 (name 라벨). 이름은 맨 뒤로 정렬되게 (앞 규칙 자리가 밀리지 않게). 자동 동기화가 계속 실패하면 OutOfSync로 남는다
+    "배포 상태 이상 (Argo CD)" = {
+      expr     = "max by (name) (argocd_app_info{cluster=\"orbit-dev\",health_status!~\"Healthy|Progressing\"} or argocd_app_info{cluster=\"orbit-dev\",sync_status!=\"Synced\"})"
+      op       = "gt", threshold = 0, for = "15m"
+      severity = "warning", summary = "Argo CD 앱 {{ $labels.name }}이 15분 넘게 Synced · Healthy가 아닙니다"
+    }
   }
 }
 
@@ -91,7 +101,7 @@ resource "grafana_rule_group" "orbit_dev" {
       name           = rule.key
       condition      = "C"
       for            = rule.value.for
-      no_data_state  = "OK"
+      no_data_state  = contains(local.no_data_alerting, rule.key) ? "Alerting" : "OK"
       exec_err_state = "Error"
       labels         = { env = "dev", severity = rule.value.severity }
       annotations    = { summary = rule.value.summary }

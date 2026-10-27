@@ -35,6 +35,10 @@ applicationSet: { replicas: 0 }
 
 controller:
   resources: { requests: { cpu: 50m, memory: 192Mi }, limits: { memory: 512Mi } }
+  # 앱 동기화 · 상태 지표(argocd_app_info) → Alloy가 ServiceMonitor를 따라 긁는다 → "배포 상태 이상 (Argo CD)" 알림
+  metrics:
+    enabled: true
+    serviceMonitor: { enabled: true, interval: 60s }
 repoServer:
   # kube-prometheus-stack 렌더링(CRD 포함)이 커서 한도를 넉넉히
   resources: { requests: { cpu: 20m, memory: 96Mi }, limits: { memory: 512Mi } }
