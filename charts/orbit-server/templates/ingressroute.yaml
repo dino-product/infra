@@ -1,25 +1,10 @@
 {{- if .Values.host }}
 # 원본 구간이 HTTP라 Traefik이 붙이는 X-Forwarded-Proto: http 를 https로 덮어쓴다 (앱이 리다이렉트 URL을 https로 만들도록)
+# 라우트(IngressRoute)는 CloudFront 비밀 헤더 값이 들어가 Git에 둘 수 없다 → platform/edge-<env>.yaml (scripts/apply-edge.sh)
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata: { name: forwarded-https }
 spec:
   headers:
     customRequestHeaders: { X-Forwarded-Proto: https }
----
-{{- if .Values.originVerify }}
-# Host와 CloudFront가 붙이는 비밀 헤더가 둘 다 맞아야 라우팅한다 (아니면 Traefik 404)
-# Argo CD로 배포할 때는 비밀 헤더를 Git에 둘 수 없어 비워 두고, 같은 라우트를 platform/edge-<env>.yaml로 따로 적용한다
-# deploy.sh(SSM 배포)처럼 --set-string originVerify=... 를 넘길 때만 여기서 만든다
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata: { name: orbit-server }
-spec:
-  entryPoints: [web]
-  routes:
-    - match: Host(`{{ .Values.host }}`) && Header(`X-Origin-Verify`, `{{ .Values.originVerify }}`)
-      kind: Rule
-      middlewares: [{ name: forwarded-https }]
-      services: [{ name: orbit-server, port: 8080 }]
-{{- end }}
 {{- end }}

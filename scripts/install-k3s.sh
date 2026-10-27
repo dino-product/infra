@@ -50,7 +50,7 @@ EOF
 
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" sh -s - server
 
-# helm: 배포 job이 SSM으로 노드에서 deploy.sh를 실행할 때 쓴다 (11단계). 로컬과 같은 메이저(v4)로 고정
+# helm: 노드에서 직접 차트를 다룰 때 (배포는 Argo CD). 로컬과 같은 메이저(v4)로 고정
 HELM_VER=v4.3.1
 curl -sfSL "https://get.helm.sh/helm-${HELM_VER}-linux-arm64.tar.gz" | tar -xz -C /tmp linux-arm64/helm
 install -m 0755 /tmp/linux-arm64/helm /usr/local/bin/helm

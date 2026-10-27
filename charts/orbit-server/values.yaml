@@ -4,7 +4,7 @@ replicas: 1
 rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
 image:
   repository: 714047901967.dkr.ecr.ap-northeast-2.amazonaws.com/orbit/server
-  tag: "" # 환경별 values-<env>.yaml (Argo CD) 또는 deploy.sh --set image.tag=<SHA>
+  tag: "" # 환경별 values-<env>.yaml. server 레포 deploy job이 커밋으로 바꾼다 (Argo CD가 반영)
 springProfile: prod
 extraEnv: {}
 resources:
@@ -27,7 +27,6 @@ secretKeys:
   - APPLE_ANDROID_RETURN_URI
   - CORS_ALLOWED_ORIGIN_PATTERNS
 host: ""
-originVerify: ""
 serviceMonitor: { enabled: false }
 redis:
   persistence: false # 14단계 prod에서 true ( AOF + PVC )

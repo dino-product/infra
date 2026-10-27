@@ -1,0 +1,19 @@
+# 차트 · 스크립트 검사. 배포는 Argo CD가 main을 보고 한다 (argocd/apps) → 깨진 차트가 main에 올라가면 바로 동기화 실패
+name: lint
+on:
+  push:
+    branches: [main]
+    paths: ["charts/**", "scripts/**", ".github/workflows/lint.yml"]
+  pull_request:
+    paths: ["charts/**", "scripts/**", ".github/workflows/lint.yml"]
+permissions: { contents: read }
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 검사
+        run: |
+          bash -n scripts/*.sh
+          helm lint charts/orbit-server -f charts/orbit-server/values-dev.yaml
