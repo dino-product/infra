@@ -51,6 +51,15 @@ resource "aws_route_table_association" "public_a" {
   route_table_id = aws_route_table.public.id
 }
 
+# S3 게이트웨이 엔드포인트 (무료): 노드 → 같은 리전 S3(사진 · etcd 스냅샷 · ECR 이미지 레이어)가 IGW를 거치지 않는다 (HM-353)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.ap-northeast-2.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id]
+  tags              = { Name = "orbit-s3" }
+}
+
 resource "aws_route_table_association" "db" {
   for_each       = { a = aws_subnet.db_a.id, c = aws_subnet.db_c.id }
   subnet_id      = each.value

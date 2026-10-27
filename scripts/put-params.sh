@@ -4,6 +4,7 @@
 #   - 이미 있는 이름은 건너뛴다 → 다시 실행해도 기존 값(특히 암호화 키)을 덮어쓰지 않는다
 #   - 값을 바꿀 때: aws ssm put-parameter --name /orbit/dev/<이름> --type SecureString --value '…' --overwrite
 #   - 카카오 · Apple · 도메인 값은 임시 값으로 넣는다. 앱이 시작할 때 형식만 검사하므로 뜨는 데는 문제없고, 10단계에서 고친다
+#   - terraform 소유 값(ORIGIN_VERIFY · MEDIA_* · GRAFANA_CLOUD_* · ARGOCD_*)은 여기서 넣지 않는다 (envs/<env> · modules/media-bucket · shared)
 set -euo pipefail
 
 ENV=${1:?"dev 또는 prod를 인자로 주세요"}
@@ -48,4 +49,5 @@ put CORS_ALLOWED_ORIGIN_PATTERNS "http://localhost:3000,http://localhost:5173"
 
 echo
 aws ssm get-parameters-by-path --region "$REGION" --path "/orbit/${ENV}" \
-  --query 'Parameters[].Name' --output text | wc -w | xargs echo "/orbit/${ENV} 파라미터 수 (15여야 함):"
+  --query 'Parameters[].Name' --output text | wc -w \
+  | xargs echo "/orbit/${ENV} 파라미터 수 (이 스크립트 15개 + terraform 소유 값 · SLACK_WEBHOOK_URL까지 함께 센다):"
