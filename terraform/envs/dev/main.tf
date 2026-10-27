@@ -61,19 +61,3 @@ resource "aws_iam_role_policy" "params_read" {
     ]
   })
 }
-
-# Grafana CloudWatch 데이터 소스가 노드 역할로 지표를 읽는다 (EC2 상태 검사 · CPU 크레딧, 12-2)
-resource "aws_iam_role_policy" "cw_read" {
-  name = "cloudwatch-read"
-  role = module.node.role_name
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Resource = "*"
-        Action   = ["cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics"]
-      },
-    ]
-  })
-}

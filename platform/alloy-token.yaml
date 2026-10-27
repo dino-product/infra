@@ -1,0 +1,9 @@
+# Alloy 서비스 계정 토큰: kubelet(cAdvisor) 스크랩 인증용 (kps-values.yaml kubelet.serviceMonitor.authorization)
+# Alloy 차트 ClusterRole에 nodes/metrics 읽기 권한이 있다
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alloy-token
+  namespace: monitoring
+  annotations: { kubernetes.io/service-account.name: alloy }
+type: kubernetes.io/service-account-token

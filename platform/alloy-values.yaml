@@ -1,5 +1,6 @@
-# Grafana Alloy (chart 1.14.0). Kubernetes API로 Pod 로그를 읽어 Loki로 보낸다 → DaemonSet · hostPath 불필요 (12-3)
-# 지표: ServiceMonitor를 따라 직접 긁어 Grafana Cloud로 보낸다. 클러스터 안 Prometheus · Loki와 같이 도는 동안 로그는 양쪽으로
+# Grafana Alloy (chart 1.14.0). 로그 · 지표를 모두 Grafana Cloud로 보낸다 (클러스터 안 Prometheus · Loki 없음)
+# 로그: Kubernetes API로 Pod 로그를 읽는다 → DaemonSet · hostPath 불필요 (12-3)
+# 지표: ServiceMonitor를 따라 직접 긁는다 (kps-values.yaml이 exporter · ServiceMonitor만 남긴다)
 controller: { type: deployment, replicas: 1 }
 configReloader:
   resources: { requests: { memory: 32Mi }, limits: { memory: 64Mi } }
@@ -40,14 +41,7 @@ alloy:
       // kubelet API로 로그를 읽는다 → 노드 파일(hostPath) 마운트 불필요
       loki.source.kubernetes "pods" {
         targets    = discovery.relabel.pods.output
-        forward_to = [loki.write.local.receiver, loki.write.cloud.receiver]
-      }
-
-      loki.write "local" {
-        endpoint {
-          url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
-        }
-        external_labels = { env = "dev" }
+        forward_to = [loki.write.cloud.receiver]
       }
 
       loki.write "cloud" {
@@ -68,23 +62,10 @@ alloy:
         scrape {
           default_scrape_interval = "60s"
         }
-        // 어차피 버릴 큰 대상은 긁지도 않는다 (긁으면 버려도 Alloy 메모리에 수만 개가 남는다)
-        // apiserver(Service kubernetes) · coredns · 관측 스택 자체 · kubelet 자체 지표(/metrics · /metrics/probes)
-        rule {
-          source_labels = ["__meta_kubernetes_service_name"]
-          regex         = "kubernetes|kps-kube-prometheus-stack-(coredns|operator|prometheus)|kps-grafana"
-          action        = "drop"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_service_name", "__metrics_path__"]
-          separator     = ";"
-          regex         = "kps-kube-prometheus-stack-kubelet;/metrics(/probes)?"
-          action        = "drop"
-        }
       }
 
       // 보낼 지표만 남긴다: 앱(orbit-server)은 전부, 나머지는 알림 · 기본 대시보드에 쓰는 것만
-      // apiserver · kubelet 자체 지표(지금 13만 개 중 11만 개)는 버린다
+      // 큰 대상(apiserver 5만 · kubelet 자체 지표 6만)은 kps-values.yaml에서 ServiceMonitor부터 뺐다
       prometheus.relabel "keep" {
         forward_to = [prometheus.remote_write.cloud.receiver]
 

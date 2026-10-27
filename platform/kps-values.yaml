@@ -1,62 +1,38 @@
-# kube-prometheus-stack (chart 92.10.1). 메모리 4GB 노드라 Alertmanager를 끄고(알림은 Grafana) 한도를 건다 (12-2)
+# kube-prometheus-stack (chart 92.10.1). 지표 저장 · 화면 · 알림은 Grafana Cloud로 옮겼다
+# 여기서는 내보내기(exporter)와 ServiceMonitor만 남긴다 → Alloy가 ServiceMonitor를 따라 긁어 보낸다 (alloy-values.yaml)
+# CRD(ServiceMonitor 등)는 그대로 설치된다: 앱 차트의 servicemonitor.yaml이 쓴다
 alertmanager: { enabled: false }
-# k3s는 controller-manager · scheduler · kube-proxy를 한 프로세스로 묶고 127.0.0.1에만 열어서 긁지 않는다
+grafana: { enabled: false }
+prometheus: { enabled: false }
+prometheusOperator: { enabled: false }
+defaultRules: { create: false }
+
+# 수집하지 않는 대상은 ServiceMonitor도 만들지 않는다
+# k3s는 controller-manager · scheduler · kube-proxy를 한 프로세스로 묶고 127.0.0.1에만 연다
+kubeApiServer: { enabled: false }
+coreDns: { enabled: false }
 kubeControllerManager: { enabled: false }
 kubeScheduler: { enabled: false }
 kubeProxy: { enabled: false }
+
 kubeEtcd:
   enabled: true
   endpoints: [10.10.0.10]                   # 노드 사설 IP. install-k3s.sh의 etcd-expose-metrics
   service: { enabled: true, port: 2381, targetPort: 2381 }
+  serviceMonitor: { authorization: null }   # 2381은 인증 없는 http
 
-prometheus:
-  prometheusSpec:
-    retention: 7d
-    retentionSize: 8GB                      # PVC 10Gi보다 작게. 먼저 닿는 쪽에서 오래된 블록을 지운다
-    scrapeInterval: 30s
-    # 이 릴리스 라벨이 없는 ServiceMonitor · PodMonitor · PrometheusRule도 읽는다 (앱 차트 12-4)
-    serviceMonitorSelectorNilUsesHelmValues: false
-    podMonitorSelectorNilUsesHelmValues: false
-    ruleSelectorNilUsesHelmValues: false
-    resources: { requests: { cpu: 100m, memory: 400Mi }, limits: { memory: 700Mi } }
-    storageSpec:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: local-path
-          accessModes: [ReadWriteOnce]
-          resources: { requests: { storage: 10Gi } }
+# 컨테이너 지표(cAdvisor)만. kubelet 자체 지표(/metrics · /metrics/probes)는 쓰지 않는다
+# 기본 인증 Secret은 Prometheus가 있어야 생긴다 → Alloy 서비스 계정 토큰(platform/alloy-token.yaml)으로 긁는다
+# kubelet Service · Endpoints(kube-system)는 operator가 만들어 둔 것이 남아 있다. 노드가 바뀌면 직접 고친다
+kubelet:
+  serviceMonitor:
+    kubelet: false
+    probes: false
+    cAdvisorInterval: 60s                   # 기본 10초 → Grafana Cloud 무료 한도(분당 1회) 기준
+    authorization:
+      type: Bearer
+      credentials: { name: alloy-token, key: token }
 
-grafana:
-  admin: { existingSecret: grafana-admin }  # platform/grafana-secret.yaml
-  defaultDashboardsTimezone: browser
-  # 공개 주소 grafana.dev.orbi-t.com (CloudFront → Traefik, platform/grafana-ingressroute.yaml)
-  # 차트 기본 grafana.ini(paths · log 등)에 덮어 합쳐진다. 가입 · 익명 접근은 막고 관리자 계정만 쓴다
-  grafana.ini:
-    server:
-      domain: grafana.dev.orbi-t.com
-      root_url: https://grafana.dev.orbi-t.com
-    security: { cookie_secure: true }
-    users: { allow_sign_up: false }
-    auth.anonymous: { enabled: false }
-  # Alertmanager를 껐으니 자동으로 붙는 Alertmanager 데이터 소스도 뺀다 (없으면 Grafana에 연결 오류로 남는다)
-  # 대시보드 · 데이터 소스 사이드카 2개(각 80~90Mi 실측)에도 한도를 건다
-  sidecar:
-    datasources: { alertmanager: { enabled: false } }
-    resources: { requests: { memory: 64Mi }, limits: { memory: 128Mi } }
-  persistence: { enabled: true, storageClassName: local-path, size: 2Gi }
-  # 실측 245Mi(설치 직후). 256Mi 한도면 OOMKilled 위험이라 384Mi
-  resources: { requests: { memory: 192Mi }, limits: { memory: 384Mi } }
-  additionalDataSources:
-    - name: Loki
-      type: loki
-      url: http://loki.monitoring.svc:3100  # 12-3
-    # 노드 역할로 인증(IMDS 홉 제한 2). envs/dev cw_read
-    - name: CloudWatch
-      type: cloudwatch
-      jsonData: { authType: default, defaultRegion: ap-northeast-2 }
-
-prometheusOperator:
-  resources: { requests: { memory: 64Mi }, limits: { memory: 128Mi } }
 kube-state-metrics:
   resources: { requests: { memory: 48Mi }, limits: { memory: 96Mi } }
 prometheus-node-exporter:

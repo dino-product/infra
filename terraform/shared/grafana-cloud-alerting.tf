@@ -1,4 +1,4 @@
-# Grafana Cloud 스택 안 리소스: 알림 연락처 · 기본 정책 · 규칙 (platform/grafana-alerting.yaml을 옮긴 것)
+# Grafana Cloud 스택 안 리소스: 알림 연락처 · 기본 정책 · 규칙 (클러스터 안 Grafana 프로비저닝 파일에서 옮겼다)
 # 스택 Grafana API는 서비스 계정 토큰으로 부른다. 토큰은 state에만 있다
 resource "grafana_cloud_stack_service_account" "terraform" {
   provider   = grafana.cloud
