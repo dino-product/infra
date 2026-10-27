@@ -1,19 +1,24 @@
 # Grafana Alloy (chart 1.14.0). Kubernetes API로 Pod 로그를 읽어 Loki로 보낸다 → DaemonSet · hostPath 불필요 (12-3)
+# 지표: ServiceMonitor를 따라 직접 긁어 Grafana Cloud로 보낸다. 클러스터 안 Prometheus · Loki와 같이 도는 동안 로그는 양쪽으로
 controller: { type: deployment, replicas: 1 }
 configReloader:
   resources: { requests: { memory: 32Mi }, limits: { memory: 64Mi } }
 alloy:
-  resources: { requests: { memory: 96Mi }, limits: { memory: 192Mi } }
+  # 원격 쓰기 WAL만큼 늘었다 (보내는 지표는 아래 keep 규칙으로 수천 개)
+  resources: { requests: { memory: 128Mi }, limits: { memory: 384Mi } }
+  # GRAFANA_CLOUD_* (platform/grafana-cloud-secret.yaml)
+  envFrom:
+    - secretRef: { name: grafana-cloud }
   configMap:
     content: |
       discovery.kubernetes "pods" {
         role = "pod"
       }
-      
+
       // Pod 메타데이터를 Loki 라벨로 (라벨 수를 적게 유지: namespace · pod · container · app)
       discovery.relabel "pods" {
         targets = discovery.kubernetes.pods.targets
-      
+
         rule {
           source_labels = ["__meta_kubernetes_namespace"]
           target_label  = "namespace"
@@ -31,16 +36,73 @@ alloy:
           target_label  = "app"
         }
       }
-      
+
       // kubelet API로 로그를 읽는다 → 노드 파일(hostPath) 마운트 불필요
       loki.source.kubernetes "pods" {
         targets    = discovery.relabel.pods.output
-        forward_to = [loki.write.local.receiver]
+        forward_to = [loki.write.local.receiver, loki.write.cloud.receiver]
       }
-      
+
       loki.write "local" {
         endpoint {
           url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
         }
         external_labels = { env = "dev" }
+      }
+
+      loki.write "cloud" {
+        endpoint {
+          url = sys.env("GRAFANA_CLOUD_LOKI_URL")
+          basic_auth {
+            username = sys.env("GRAFANA_CLOUD_LOKI_USER")
+            password = sys.env("GRAFANA_CLOUD_TOKEN")
+          }
+        }
+        external_labels = { cluster = "orbit-dev", env = "dev" }
+      }
+
+      // kube-prometheus-stack · 앱 차트의 ServiceMonitor를 그대로 따른다 (job 라벨도 Prometheus와 같다)
+      // 무료 한도가 시계열 1만 개 · 분당 1회 기준이라 간격 60초 (ServiceMonitor에 간격이 있으면 그 값)
+      prometheus.operator.servicemonitors "all" {
+        forward_to = [prometheus.relabel.keep.receiver]
+        scrape {
+          default_scrape_interval = "60s"
+        }
+        // 어차피 버릴 큰 대상은 긁지도 않는다 (긁으면 버려도 Alloy 메모리에 수만 개가 남는다)
+        // apiserver(Service kubernetes) · coredns · 관측 스택 자체 · kubelet 자체 지표(/metrics · /metrics/probes)
+        rule {
+          source_labels = ["__meta_kubernetes_service_name"]
+          regex         = "kubernetes|kps-kube-prometheus-stack-(coredns|operator|prometheus)|kps-grafana"
+          action        = "drop"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_service_name", "__metrics_path__"]
+          separator     = ";"
+          regex         = "kps-kube-prometheus-stack-kubelet;/metrics(/probes)?"
+          action        = "drop"
+        }
+      }
+
+      // 보낼 지표만 남긴다: 앱(orbit-server)은 전부, 나머지는 알림 · 기본 대시보드에 쓰는 것만
+      // apiserver · kubelet 자체 지표(지금 13만 개 중 11만 개)는 버린다
+      prometheus.relabel "keep" {
+        forward_to = [prometheus.remote_write.cloud.receiver]
+
+        rule {
+          source_labels = ["job", "__name__"]
+          separator     = ";"
+          action        = "keep"
+          regex         = "orbit-server;.*|[^;]*;(up|node_memory_(MemAvailable|MemTotal|SwapTotal|SwapFree)_bytes|node_filesystem_(avail|size)_bytes|node_cpu_seconds_total|node_load(1|5|15)|node_network_(receive|transmit)_bytes_total|node_disk_(read|written)_bytes_total|node_disk_io_time_seconds_total|node_vmstat_oom_kill|node_pressure_(cpu|memory|io)_waiting_seconds_total|kube_pod_status_phase|kube_pod_container_status_(restarts_total|waiting_reason|last_terminated_reason|ready)|kube_pod_container_resource_(requests|limits)|kube_deployment_(spec_replicas|status_replicas_available)|kube_statefulset_status_replicas_ready|kube_node_status_(allocatable|capacity|condition)|container_cpu_usage_seconds_total|container_memory_(working_set_bytes|rss)|container_network_(receive|transmit)_bytes_total|kubelet_volume_stats_(available|capacity)_bytes|etcd_mvcc_db_total_size_in_bytes|etcd_server_has_leader)"
+        }
+      }
+
+      prometheus.remote_write "cloud" {
+        endpoint {
+          url = sys.env("GRAFANA_CLOUD_PROM_URL")
+          basic_auth {
+            username = sys.env("GRAFANA_CLOUD_PROM_USER")
+            password = sys.env("GRAFANA_CLOUD_TOKEN")
+          }
+        }
+        external_labels = { cluster = "orbit-dev", env = "dev" }
       }
