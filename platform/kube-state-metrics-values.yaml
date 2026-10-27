@@ -1,0 +1,9 @@
+# kube-state-metrics (chart 8.7.1). 수집기는 Alloy keep 규칙 · 알림에 쓰는 종류만 (watch가 줄어 메모리도 준다)
+# job 라벨은 Service 이름(kube-state-metrics)
+collectors: [pods, deployments, statefulsets, daemonsets, nodes, namespaces, replicasets, persistentvolumeclaims, jobs, cronjobs]
+prometheus:
+  monitor:
+    enabled: true
+    honorLabels: true
+    interval: 60s
+resources: { requests: { cpu: 10m, memory: 48Mi }, limits: { memory: 96Mi } }

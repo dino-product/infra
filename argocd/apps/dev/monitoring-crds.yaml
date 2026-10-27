@@ -1,0 +1,20 @@
+# ServiceMonitor CRD 하나만. Alloy(prometheus.operator.servicemonitors)와 앱 · exporter 차트의 ServiceMonitor가 쓴다
+# 전에는 kube-prometheus-stack이 CRD 10개(Prometheus · Alertmanager · ScrapeConfig …)를 깔았는데 Grafana Cloud로 옮긴 뒤 쓰는 건 이것뿐
+# 파일 원본: prometheus-operator v0.94.1 example/prometheus-operator-crd (operator 버전을 올릴 때 같이 바꾼다)
+# ServiceMonitor보다 먼저 있어야 하므로 external-secrets와 같은 wave
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-crds
+  namespace: argocd
+  annotations: { argocd.argoproj.io/sync-wave: "-2" }
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:dino-product/infra.git
+    targetRevision: main
+    path: platform/crds
+  destination: { server: https://kubernetes.default.svc }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]   # CRD가 커서 last-applied 주석 한도를 넘는다

@@ -96,8 +96,8 @@ charts/orbit-server/   앱 차트. values-dev.yaml의 image.tag는 server CI가 
 argocd/
   values.yaml      Argo CD 설치 값
   root-dev.yaml    루트 앱 (App of Apps)
-  apps/dev/        external-secrets · platform · kps · alloy · orbit-server
-platform/          클러스터 공통 구성: External Secrets · exporter · Alloy
+  apps/dev/        external-secrets · monitoring-crds · platform · node-exporter · kube-state-metrics · alloy · orbit-server
+platform/          클러스터 공통 구성: External Secrets · ServiceMonitor CRD(crds/) · exporter 값 · kubelet · etcd 수집 대상 · Alloy
 scripts/           k3s · Argo CD 설치, 공개 라우트 적용, 비밀 값 등록
 .github/workflows/lint.yml  차트 · 스크립트 검사
 ```
@@ -112,7 +112,7 @@ scripts/           k3s · Argo CD 설치, 공개 라우트 적용, 비밀 값 �
 | 컴퓨팅 | EC2 한 대(t4g.medium) 위 k3s 단일 노드 | EKS (컨트롤 플레인만 월 약 $73), ECS Fargate (Kubernetes 직접 운영 학습 목표와 안 맞음), EC2 + Compose (자동 복구 · 선언적 관리 약함) |
 | 진입점 | CloudFront + 탄력적 IP + Traefik | ALB (고정비 월 약 $20), 노드 직접 공개 (TLS · 엣지 보호 없음) |
 | DB | RDS db.t4g.micro 한 대에 dev · prod DB를 분리 | 클러스터 안 PostgreSQL (백업 직접 운영), 환경별 RDS (비용 2배) |
-| 관측 | Grafana Cloud 무료 + Alloy | 클러스터 안 Prometheus · Grafana · Loki (노드 메모리 약 1.2GiB), 모니터링 전용 노드 (월 $15), CloudWatch (수집량 과금, 월 약 $190 추정) |
+| 관측 | Grafana Cloud 무료 + Alloy + exporter 2개 | 클러스터 안 Prometheus · Grafana · Loki (노드 메모리 약 1.2GiB), 모니터링 전용 노드 (월 $15), CloudWatch (수집량 과금, 월 약 $190 추정). kube-prometheus-stack 차트는 CRD 10개 · 렌더링 부담이 커서 exporter만 따로 설치 (2026-10-28) |
 | 배포 | Argo CD (pull) + CI가 이 레포에 태그 커밋 | Actions → SSM → helm (클러스터가 Git과 어긋나도 모름), Argo CD Image Updater (Pod 추가, 배포 이력이 Git에 안 남음) |
 
 관측을 Grafana Cloud로 옮기면서 노드 여유 메모리가 23%에서 47%로 늘었고, 그 여유로 Argo CD를 올렸다.
