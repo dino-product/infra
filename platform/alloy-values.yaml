@@ -1,6 +1,6 @@
 # Grafana Alloy (chart 1.14.0). 로그 · 지표를 모두 Grafana Cloud로 보낸다 (클러스터 안 Prometheus · Loki 없음)
 # 로그: Kubernetes API로 Pod 로그를 읽는다 → DaemonSet · hostPath 불필요 (12-3)
-# 지표: ServiceMonitor를 따라 직접 긁는다 (exporter 차트 · scrape-kubelet.yaml · 앱 차트가 만든다)
+# 지표: ServiceMonitor(exporter 차트 · 앱 차트)를 따라 긁고, kubelet · etcd는 노드를 찾아 직접 긁는다
 controller: { type: deployment, replicas: 1 }
 configReloader:
   resources: { requests: { memory: 32Mi }, limits: { memory: 64Mi } }
@@ -86,7 +86,78 @@ alloy:
         external_labels = { cluster = "orbit-dev", env = "dev" }
       }
 
-      // exporter 차트 · scrape-kubelet.yaml · 앱 차트의 ServiceMonitor를 그대로 따른다 (job 라벨도 Prometheus와 같다)
+      // kubelet(cAdvisor) · k3s 내장 etcd: 노드를 API에서 찾아 직접 긁는다 (job 라벨 kubelet · kube-etcd는 전과 같다)
+      // ServiceMonitor로 하려면 Endpoints를 손으로 둬야 하는데 Argo CD가 Endpoints 종류를 기본으로 무시한다 → 여기서 처리
+      discovery.kubernetes "nodes" {
+        role = "node"
+      }
+
+      // 컨테이너 지표만. kubelet 자체 지표(/metrics)는 양이 많아 쓰지 않는다. 인증은 Alloy 서비스 계정 토큰 (ClusterRole에 nodes/metrics)
+      discovery.relabel "kubelet" {
+        targets = discovery.kubernetes.nodes.targets
+        rule {
+          target_label = "__metrics_path__"
+          replacement  = "/metrics/cadvisor"
+        }
+        rule {
+          target_label = "metrics_path"
+          replacement  = "/metrics/cadvisor"
+        }
+      }
+
+      prometheus.scrape "kubelet" {
+        targets           = discovery.relabel.kubelet.output
+        forward_to        = [prometheus.relabel.cadvisor.receiver]
+        job_name          = "kubelet"
+        scheme            = "https"
+        bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        scrape_interval   = "60s"
+        honor_labels      = true
+        tls_config {
+          insecure_skip_verify = true
+        }
+      }
+
+      // 안 쓰는 cAdvisor 지표는 버린다 (kube-prometheus-stack 기본 규칙과 같다)
+      prometheus.relabel "cadvisor" {
+        forward_to = [prometheus.relabel.keep.receiver]
+        rule {
+          source_labels = ["__name__"]
+          regex         = "container_cpu_(cfs_throttled_seconds_total|load_average_10s|system_seconds_total|user_seconds_total)|container_fs_(io_current|io_time_seconds_total|io_time_weighted_seconds_total|reads_merged_total|sector_reads_total|sector_writes_total|writes_merged_total)|container_memory_(mapped_file|swap)|container_(file_descriptors|tasks_state|threads_max)|container_spec.*"
+          action        = "drop"
+        }
+        rule {
+          source_labels = ["__name__", "scope"]
+          separator     = ";"
+          regex         = "container_memory_failures_total;hierarchy"
+          action        = "drop"
+        }
+        rule {
+          source_labels = ["id", "pod"]
+          separator     = ";"
+          regex         = ".+;"
+          action        = "drop"
+        }
+      }
+
+      // etcd 지표는 install-k3s.sh의 etcd-expose-metrics로 노드 :2381(인증 없는 http)에 열려 있다
+      discovery.relabel "etcd" {
+        targets = discovery.kubernetes.nodes.targets
+        rule {
+          source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+          target_label  = "__address__"
+          replacement   = "$1:2381"
+        }
+      }
+
+      prometheus.scrape "etcd" {
+        targets         = discovery.relabel.etcd.output
+        forward_to      = [prometheus.relabel.keep.receiver]
+        job_name        = "kube-etcd"
+        scrape_interval = "60s"
+      }
+
+      // exporter 차트 · 앱 차트의 ServiceMonitor를 그대로 따른다 (job 라벨도 Prometheus와 같다)
       // 무료 한도가 시계열 1만 개 · 분당 1회 기준이라 간격 60초 (ServiceMonitor에 간격이 있으면 그 값)
       prometheus.operator.servicemonitors "all" {
         forward_to = [prometheus.relabel.keep.receiver]
@@ -96,7 +167,7 @@ alloy:
       }
 
       // 보낼 지표만 남긴다: 앱(orbit-server)은 전부, 나머지는 알림 · 기본 대시보드에 쓰는 것만
-      // 큰 대상(apiserver 5만 · kubelet 자체 지표 6만)은 ServiceMonitor를 두지 않는다 (scrape-kubelet.yaml은 cAdvisor만)
+      // 큰 대상(apiserver 5만 · kubelet 자체 지표 6만)은 ServiceMonitor를 두지 않는다 (kubelet은 cAdvisor만)
       prometheus.relabel "keep" {
         forward_to = [prometheus.remote_write.cloud.receiver]
 

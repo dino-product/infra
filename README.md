@@ -97,7 +97,7 @@ argocd/
   values.yaml      Argo CD 설치 값
   root-dev.yaml    루트 앱 (App of Apps)
   apps/dev/        external-secrets · monitoring-crds · platform · node-exporter · kube-state-metrics · alloy · orbit-server
-platform/          클러스터 공통 구성: External Secrets · ServiceMonitor CRD(crds/) · exporter 값 · kubelet · etcd 수집 대상 · Alloy
+platform/          클러스터 공통 구성: External Secrets · ServiceMonitor CRD(crds/) · exporter 값 · Alloy(kubelet · etcd는 Alloy가 노드를 찾아 직접 긁는다)
 scripts/           k3s · Argo CD 설치, 공개 라우트 적용, 비밀 값 등록
 .github/workflows/lint.yml  차트 · 스크립트 검사
 ```
