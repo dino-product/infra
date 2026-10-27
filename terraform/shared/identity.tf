@@ -8,6 +8,19 @@ locals {
   identity_store_id = tolist(data.aws_ssoadmin_instances.main.identity_store_ids)[0]
   account_id        = "714047901967"
   region            = "ap-northeast-2"
+
+  # 팀원이 값을 못 읽는 dev 파라미터: 앱 · 인프라 구성 요소만 쓴다
+  # DATABASE_PASSWORD는 스키마 소유자라 막아야 사람용 orbit_dev_ro · rw 분리가 의미 있다
+  dev_params_no_read = [
+    "DATABASE_PASSWORD", "ORIGIN_VERIFY", "ARGOCD_REPO_SSH_KEY",
+    "GRAFANA_CLOUD_TOKEN", "SLACK_WEBHOOK_URL", "SWAGGER_HTPASSWD",
+  ]
+  # 팀원은 읽기만: Terraform · put-params.sh가 넣는 값 (바꾸면 dev가 깨지거나 다음 apply에 되돌아간다)
+  dev_params_no_write = [
+    "DATABASE_URL", "DATABASE_USERNAME", "DATABASE_RO_PASSWORD", "DATABASE_RW_PASSWORD",
+    "SWAGGER_PASSWORD", "MEDIA_*", "GRAFANA_CLOUD_*",
+  ]
+  dev_param_arn = "arn:aws:ssm:${local.region}:${local.account_id}:parameter/orbit/dev"
 }
 
 resource "aws_identitystore_group" "developers" {
@@ -38,20 +51,28 @@ resource "aws_ssoadmin_permission_set_inline_policy" "dev_developer" {
     Version = "2012-10-17"
     Statement = [
       {
-        # dev 파라미터만 읽고 쓴다. GetParametersByPath는 경로 자체(/orbit/dev)로 권한을 본다 → 둘 다 적는다
+        # dev 파라미터를 이름으로 읽고 쓴다 (경로 조회는 아래에서 막는다)
         # SecureString은 AWS 관리 키 aws/ssm이라 KMS 권한 없이 SSM을 거쳐 복호화된다
         Sid    = "DevParamsReadWrite"
         Effect = "Allow"
         Action = [
           "ssm:GetParameter",
           "ssm:GetParameters",
-          "ssm:GetParametersByPath",
           "ssm:PutParameter",
         ]
-        Resource = [
-          "arn:aws:ssm:${local.region}:${local.account_id}:parameter/orbit/dev",
-          "arn:aws:ssm:${local.region}:${local.account_id}:parameter/orbit/dev/*",
-        ]
+        Resource = ["${local.dev_param_arn}/*"]
+      },
+      {
+        Sid      = "DenyInfraDevParams"
+        Effect   = "Deny"
+        Action   = ["ssm:GetParameter*", "ssm:PutParameter", "ssm:DeleteParameter*"]
+        Resource = [for n in local.dev_params_no_read : "${local.dev_param_arn}/${n}"]
+      },
+      {
+        Sid      = "DenyWriteManagedDevParams"
+        Effect   = "Deny"
+        Action   = ["ssm:PutParameter", "ssm:DeleteParameter*"]
+        Resource = [for n in local.dev_params_no_write : "${local.dev_param_arn}/${n}"]
       },
       {
         # 이름 · 메타데이터 목록만 보여 주고 값은 보여 주지 않는다 (리소스 지정 불가 → *)
@@ -126,14 +147,12 @@ resource "aws_ssoadmin_permission_set_inline_policy" "dev_developer" {
         ]
       },
       {
-        # 경로 권한이 있으면 하위 파라미터의 개별 Deny를 무시하고 재귀 조회된다 → /orbit/dev 밖 경로 조회 자체를 막는다
-        Sid    = "DenyByPathOutsideDev"
-        Effect = "Deny"
-        Action = "ssm:GetParametersByPath"
-        NotResource = [
-          "arn:aws:ssm:${local.region}:${local.account_id}:parameter/orbit/dev",
-          "arn:aws:ssm:${local.region}:${local.account_id}:parameter/orbit/dev/*",
-        ]
+        # 경로 조회는 하위 파라미터의 개별 Deny를 무시하고 재귀로 값을 돌려준다 → 경로 조회 자체를 막는다
+        # 이름 목록은 DescribeParameters로 본다
+        Sid      = "DenyByPath"
+        Effect   = "Deny"
+        Action   = "ssm:GetParametersByPath"
+        Resource = "*"
       },
       {
         # 이중 잠금: tfstate · etcd 스냅샷에는 비밀값이 들어 있다 (ViewOnly도 원래 못 읽는다)
