@@ -78,7 +78,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 1. **지표 수집**: Alloy가 ServiceMonitor를 따라 60초마다 앱 · kube-state-metrics · node-exporter · cAdvisor를 긁는다
 2. **로그 수집**: Kubernetes API로 Pod 로그를 읽고(kube-system · monitoring 제외), 이메일 · 전화번호 · 토큰은 보내기 전에 가린다
 3. **전송**: 지표(원격 쓰기)와 로그를 Grafana Cloud로. 무료 한도 안 (약 850 시계열)
-4. **알림**: 다운 · 5xx · p95 · 메모리 · 디스크 · Argo CD 앱 상태 · 실시간(SSE) · 포화 징후(OOM · DB 커넥션 대기 · 노드 CPU) 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
+4. **알림**: 다운 · 5xx(503 제외) · p95 · 메모리 · 디스크 · Argo CD 앱 상태 · 실시간(SSE) · 포화 징후(OOM · DB 커넥션 대기 · 노드 CPU · 의도한 거절 503) 규칙 → Slack. 다운 규칙은 지표가 끊겨도 울린다 (노드가 죽으면 Alloy도 같이 죽기 때문)
 
 </details>
 
