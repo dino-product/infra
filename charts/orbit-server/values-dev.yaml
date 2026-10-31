@@ -5,11 +5,9 @@ image: { tag: 29714530b09d13dacf9ebac1bb1dd4b2cd09c9f6 }
 # 그래서 Swagger · 로그 · 지표 environment 태그를 환경 변수로 덮어쓰지 않는다
 springProfile: dev
 # 부하 측정(2026-10-27, server realtime-overload-plan.md 3·6절): 힙 상한 538MB + 힙 밖 200MB + 스레드 254개 스택이 768Mi를 넘어 OOMKilled
-# → 힙 45%(약 345MB. 2026-10-31 측정: 힙 used 최대 273MB인데 committed가 상한까지 자라 RSS 766Mi로 cgroup OOM → 45%면 RSS 상한 약 690Mi), 스레드 스택 512k. NativeMemoryTracking은 "그 밖 약 110Mi" 확인용 임시(확인 뒤 뺀다). 톰캣 스레드 상한 60은 아래 extraEnv (SSE는 비동기라 스레드를 잡지 않는다)
-javaOpts: "-XX:MaxRAMPercentage=45 -Xss512k -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:NativeMemoryTracking=summary"
-extraEnv:
-  SERVER_TOMCAT_THREADS_MAX: "60"   # server.tomcat.threads.max. 측정으로 정한 값이 server 설정에 들어가면 여기서 뺀다
-  SERVER_TOMCAT_MBEANREGISTRY_ENABLED: "true"   # server.tomcat.mbeanregistry.enabled. 톰캣 바쁜 스레드 지표(tomcat_threads_busy_threads) 노출. 측정 뒤 server 설정으로 옮기면 뺀다
+# → 힙 45%(약 345MB) · 스레드 스택 512k. 2026-10-31 재측정(server realtime-overload-plan.md 8절): 연결 1,000 · 500 burst에서 RSS 최대 717Mi(힙 committed 354MB + 힙 밖 약 350MB)로 고정, OOM 0.
+#   힙 40%는 힙 used 최대 324MB를 넘기 어려워 안 내린다. 톰캣 스레드 60 · MBean 레지스트리는 server application.yml(server PR #112)로 옮겨 여기서 뺐다
+javaOpts: "-XX:MaxRAMPercentage=45 -Xss512k -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 # dev 노드(4GB)는 Argo CD까지 올라가 여유 메모리가 20% 안팎 → 배포 때 Pod 2개를 띄우지 않고 이전 Pod를 먼저 내린다 (1~2분 끊김)
 rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com
