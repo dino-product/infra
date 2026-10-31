@@ -107,11 +107,11 @@ locals {
       severity = "warning", summary = "dev 노드 CPU 사용률이 10분 넘게 90%를 넘었습니다 (t4g 버스트 초과 요금 · 제어부 지연)"
     }
     # 실시간 갱신(SSE) 경보 3종: Notion "실시간 화면 갱신(SSE) 설계" 운영 고려사항. 파드마다 따로 알린다
-    # 연결 상한은 인스턴스 2,000 (app.realtime.connection 기본값). 바꾸면 여기 1400도 같이
+    # 연결 상한은 인스턴스 1,000 (2026-10-31 측정: 약 1,495 연결에서 cgroup OOM → 2,000에서 낮춤, server 반영 전까지는 2,000의 35%). 바꾸면 여기 700도 같이
     "실시간 연결 > 70%" = {
       expr     = "sum by (pod) (realtime_connections{cluster=\"orbit-dev\",job=\"orbit-server\"})"
-      op       = "gt", threshold = 1400, for = "5m"
-      severity = "warning", summary = "{{ $labels.pod }} 실시간 연결이 상한 2,000의 70%를 넘었습니다"
+      op       = "gt", threshold = 700, for = "5m"
+      severity = "warning", summary = "{{ $labels.pod }} 실시간 연결이 상한 1,000의 70%를 넘었습니다"
     }
     # 기동 · 종료 때 잠깐 0이 된다 → 수집 주기(60초) 두 번을 넘길 때만
     "실시간 구독 끊김" = {
