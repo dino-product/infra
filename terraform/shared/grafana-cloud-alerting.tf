@@ -61,10 +61,11 @@ locals {
       expr     = "up{cluster=\"orbit-dev\",job=\"orbit-server\"}", op = "lt", threshold = 1, for = "2m"
       severity = "critical", summary = "orbit-server가 2분 넘게 응답하지 않거나 지표가 끊겼습니다 (노드 · Alloy 다운 포함)"
     }
+    # 503은 2026-10-31부터 서버가 의도해서 보내는 과부하 거절(보드 동시 조회 상한 · Hikari 대기 초과, server 1-b)이라 여기서 빼고 아래 "포화 징후: 의도한 거절(503)"로 따로 본다
     "5xx 비율 > 5%" = {
-      expr     = "sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\"}[5m]))"
+      expr     = "sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\",status=~\"5..\",status!=\"503\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\"}[5m]))"
       op       = "gt", threshold = 0.05, for = "5m"
-      severity = "critical", summary = "최근 5분 5xx 응답 비율이 5%를 넘었습니다"
+      severity = "critical", summary = "최근 5분 5xx(503 제외) 응답 비율이 5%를 넘었습니다"
     }
     "p95 > 1초" = {
       expr     = "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"orbit-dev\",job=\"orbit-server\"}[5m])))"
@@ -105,6 +106,12 @@ locals {
       expr     = "1 - avg(rate(node_cpu_seconds_total{cluster=\"orbit-dev\",mode=\"idle\"}[5m]))"
       op       = "gt", threshold = 0.9, for = "10m"
       severity = "warning", summary = "dev 노드 CPU 사용률이 10분 넘게 90%를 넘었습니다 (t4g 버스트 초과 요금 · 제어부 지연)"
+    }
+    # 서버가 과부하로 거절한 요청(503). 거절 자체는 정상 동작이지만 5분 넘게 전체의 10%를 넘으면 용량이 부족한 것
+    "포화 징후: 의도한 거절(503)" = {
+      expr     = "sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\",status=\"503\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"orbit-dev\",job=\"orbit-server\"}[5m]))"
+      op       = "gt", threshold = 0.1, for = "5m"
+      severity = "warning", summary = "최근 5분 과부하 거절(503) 비율이 10%를 넘었습니다 (보드 동시 조회 상한 · DB 커넥션 대기 초과)"
     }
     # 실시간 갱신(SSE) 경보 3종: Notion "실시간 화면 갱신(SSE) 설계" 운영 고려사항. 파드마다 따로 알린다
     # 연결 상한은 인스턴스 1,000 (2026-10-31 측정: 약 1,495 연결에서 cgroup OOM → 2,000에서 낮춤, server 반영 전까지는 2,000의 35%). 바꾸면 여기 700도 같이
