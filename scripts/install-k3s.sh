@@ -56,6 +56,16 @@ providers:
     apiVersion: credentialprovider.kubelet.k8s.io/v1
 EOF
 
+# k3s 서버(Go)의 메모리 상한: 2026-10-31 부하 측정에서 k3s-server가 살아있는 힙 524Mi에 GC 여유분까지 RSS 1.46GiB + 스왑 0.5GiB를 쥐다가
+#   etcd 응답이 7~9초로 늘어 리더 임대 갱신에 실패해 종료(재시작)됐다. GOMEMLIMIT을 주면 Go 런타임이 이 선 근처에서 GC를 더 자주 돌려 메모리를 반납한다.
+#   kube-reserved(1Gi)와 같은 값. 드롭인이라 k3s 재설치 뒤에도 남는다.
+mkdir -p /etc/systemd/system/k3s.service.d
+cat > /etc/systemd/system/k3s.service.d/10-gomemlimit.conf <<'EOF'
+[Service]
+Environment=GOMEMLIMIT=1GiB
+EOF
+systemctl daemon-reload
+
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" sh -s - server
 
 # helm: 노드에서 직접 차트를 다룰 때 (배포는 Argo CD). 로컬과 같은 메이저(v4)로 고정
