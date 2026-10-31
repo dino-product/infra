@@ -132,6 +132,13 @@ alloy:
           regex         = "container_memory_failures_total;hierarchy"
           action        = "drop"
         }
+        // k3s 서비스 cgroup만 pod="k3s-service"로 이름 붙여 남긴다 (k3s-server 메모리 추이. 2026-10-31 부하 때 스왑으로 밀려 재시작된 전례)
+        rule {
+          source_labels = ["id"]
+          regex         = "/system\\.slice/k3s\\.service"
+          target_label  = "pod"
+          replacement   = "k3s-service"
+        }
         rule {
           source_labels = ["id", "pod"]
           separator     = ";"
