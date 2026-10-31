@@ -9,6 +9,7 @@ springProfile: dev
 javaOpts: "-XX:MaxRAMPercentage=55 -Xss512k -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 extraEnv:
   SERVER_TOMCAT_THREADS_MAX: "60"   # server.tomcat.threads.max. 측정으로 정한 값이 server 설정에 들어가면 여기서 뺀다
+  SERVER_TOMCAT_MBEANREGISTRY_ENABLED: "true"   # server.tomcat.mbeanregistry.enabled. 톰캣 바쁜 스레드 지표(tomcat_threads_busy_threads) 노출. 측정 뒤 server 설정으로 옮기면 뺀다
 # dev 노드(4GB)는 Argo CD까지 올라가 여유 메모리가 20% 안팎 → 배포 때 Pod 2개를 띄우지 않고 이전 Pod를 먼저 내린다 (1~2분 끊김)
 rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com
