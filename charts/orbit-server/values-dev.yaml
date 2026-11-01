@@ -1,6 +1,6 @@
 env: dev
 # server 레포 deploy-dev가 develop 빌드 후 이 줄을 커밋으로 바꾼다 → Argo CD가 반영 (직접 고치지 않는다)
-image: { tag: 29714530b09d13dacf9ebac1bb1dd4b2cd09c9f6 }
+image: { tag: b27f18f89072c22deacb79dd373e5a10fa447c73 }
 # server의 dev 프로필(HM-351): 배포 공통(deployed) + Swagger 켬 · 앱 로그 DEBUG · 임시 어댑터 허용
 # 그래서 Swagger · 로그 · 지표 environment 태그를 환경 변수로 덮어쓰지 않는다
 springProfile: dev
