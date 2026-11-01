@@ -1,0 +1,3081 @@
+{
+  "uid": "orbit-overview",
+  "title": "Orbit 서버 개요",
+  "description": "orbit-server · 노드 · 배포 상태. 코드: infra terraform/shared/dashboards/build.py (UI 수정은 apply 때 덮인다)",
+  "tags": [
+    "orbit"
+  ],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "환경",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "query": {
+          "query": "label_values(up{job=\"orbit-server\"}, cluster)",
+          "refId": "cluster"
+        },
+        "definition": "label_values(up{job=\"orbit-server\"}, cluster)",
+        "current": {
+          "text": "orbit-dev",
+          "value": "orbit-dev"
+        },
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "title": "한눈에 보기",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "앱 상태",
+      "description": "orbit-server가 지표 수집에 응답하는지. 0이면 다운",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(up{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "정상",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "다운",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "지표 없음",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "요청 / 초",
+      "description": "최근 5분 평균 API 요청 수",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "blue"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "오류율 (5xx)",
+      "description": "503(의도한 과부하 거절) 제외. 알림 기준 5%",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\",status=~\"5..\",status!=\"503\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.01,
+                "color": "orange"
+              },
+              {
+                "value": 0.05,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "p95 응답 시간",
+      "description": "요청 95%가 이 시간 안에 끝난다. 알림 기준 1초",
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"$cluster\",job=\"orbit-server\"}[5m])))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.5,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "과부하 거절 (503)",
+      "description": "서버가 일부러 거절한 비율 (보드 동시 조회 상한 · DB 커넥션 대기). 알림 기준 10%",
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\",status=\"503\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.01,
+                "color": "orange"
+              },
+              {
+                "value": 0.1,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "재시작 (24시간)",
+      "description": "orbit-dev 컨테이너 재시작 횟수 (OOM · 기동 실패 · liveness 실패)",
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=\"$cluster\",namespace=\"orbit-dev\"}[24h])) or vector(0)",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "노드 여유 메모리",
+      "description": "MemAvailable / 전체. 알림 기준 10%",
+      "id": 8,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(node_memory_MemAvailable_bytes{cluster=\"$cluster\"} / node_memory_MemTotal_bytes{cluster=\"$cluster\"})",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 0.1,
+                "color": "orange"
+              },
+              {
+                "value": 0.2,
+                "color": "green"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "배포 이상 앱",
+      "description": "Argo CD에서 Synced · Healthy가 아닌 앱 수. 아래 '쿠버네티스 · 배포'에서 앱 이름",
+      "id": 9,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(argocd_app_info{cluster=\"$cluster\",health_status!~\"Healthy|Progressing\"} or argocd_app_info{cluster=\"$cluster\",sync_status!=\"Synced\"}) or vector(0)",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "row",
+      "title": "API",
+      "id": 10,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "초당 요청 (상태 코드별)",
+      "description": "2xx 정상 · 4xx 클라이언트 오류(인증 · 검증) · 5xx 서버 오류(503은 과부하 거절)",
+      "id": 11,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (label_replace(rate(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]), \"code\", \"${1}xx\", \"status\", \"([0-9])..\"))",
+          "legendFormat": "{{code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "응답 시간",
+      "description": "빨간 점선이 알림 기준(p95 1초)",
+      "id": 12,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"$cluster\",job=\"orbit-server\"}[5m])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"$cluster\",job=\"orbit-server\"}[5m])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"$cluster\",job=\"orbit-server\"}[5m])))",
+          "legendFormat": "p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "엔드포인트별 (최근 1시간)",
+      "description": "느린 · 실패하는 엔드포인트 찾기. 열 머리를 눌러 정렬",
+      "id": 13,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (method, uri) (increase(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[1h])) > 0",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (method, uri, le) (rate(http_server_requests_seconds_bucket{cluster=\"$cluster\",job=\"orbit-server\"}[1h]))) > 0",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (method, uri) (increase(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\",status=~\"4..\"}[1h]))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "expr": "sum by (method, uri) (increase(http_server_requests_seconds_count{cluster=\"$cluster\",job=\"orbit-server\",status=~\"5..\"}[1h]))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "method": "메서드",
+              "uri": "경로",
+              "Value #A": "요청",
+              "Value #B": "p95",
+              "Value #C": "4xx",
+              "Value #D": "5xx"
+            },
+            "indexByName": {
+              "method": 0,
+              "uri": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "요청"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "요청",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "앱 (메모리 · CPU · JVM)",
+      "id": 14,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "컨테이너 메모리 vs 한도",
+      "description": "한도(768Mi)에 닿으면 OOMKilled. 한도는 올리지 않는 원칙 (노드 위험)",
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{cluster=\"$cluster\",namespace=\"orbit-dev\",container=\"app\"})",
+          "legendFormat": "{{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max(kube_pod_container_resource_limits{cluster=\"$cluster\",namespace=\"orbit-dev\",container=\"app\",resource=\"memory\"})",
+          "legendFormat": "한도",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "한도"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU vs 한도",
+      "description": "코어 수. 한도 1.5코어에 붙어 있으면 스로틀링으로 느려진다",
+      "id": 16,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{cluster=\"$cluster\",namespace=\"orbit-dev\",container=\"app\"}[5m]))",
+          "legendFormat": "{{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max(kube_pod_container_resource_limits{cluster=\"$cluster\",namespace=\"orbit-dev\",container=\"app\",resource=\"cpu\"})",
+          "legendFormat": "한도",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "한도"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM 힙",
+      "description": "톱니 모양이 정상 (GC). 바닥이 계속 오르면 누수 의심",
+      "id": 17,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 28
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (jvm_memory_used_bytes{cluster=\"$cluster\",job=\"orbit-server\",area=\"heap\"})",
+          "legendFormat": "사용 {{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (pod) (jvm_memory_committed_bytes{cluster=\"$cluster\",job=\"orbit-server\",area=\"heap\"})",
+          "legendFormat": "확보 {{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "max(sum by (pod) (jvm_memory_max_bytes{cluster=\"$cluster\",job=\"orbit-server\",area=\"heap\"}))",
+          "legendFormat": "최대",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "최대"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "GC 일시 정지",
+      "description": "1초 중 GC로 멈춘 비율. 5%를 넘으면 힙이 부족하다",
+      "id": 18,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(jvm_gc_pause_seconds_sum{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "{{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "톰캣 스레드",
+      "description": "최대에 붙으면 요청이 줄을 선다",
+      "id": 19,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (tomcat_threads_busy_threads{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "사용 중 {{pod}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max(tomcat_threads_config_max_threads{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "최대",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "최대"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "오류 · 경고 로그 수",
+      "description": "분당 건수. 내용은 맨 아래 '로그'",
+      "id": 20,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (level) (rate(logback_events_total{cluster=\"$cluster\",job=\"orbit-server\",level=~\"error|warn\"}[5m])) * 60",
+          "legendFormat": "{{level}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "warn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "DB · Redis",
+      "id": 21,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "DB 커넥션 풀",
+      "description": "'커넥션 기다리는 요청'이 2분 넘게 5를 넘으면 알림",
+      "id": 22,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 45
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(hikaricp_connections_active{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "사용 중",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(hikaricp_connections_idle{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "대기(유휴)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "sum(hikaricp_connections_pending{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "커넥션 기다리는 요청",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "max(hikaricp_connections_max{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "최대",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "최대"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "DB 커넥션 얻는 시간",
+      "description": "풀이 넉넉하면 거의 0",
+      "id": 23,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 45
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(hikaricp_connections_acquire_seconds_sum{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) / sum(rate(hikaricp_connections_acquire_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "평균",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(hikaricp_connections_timeout_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "타임아웃 / 분",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "타임아웃 / 분"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Redis 명령",
+      "description": "Redis는 인증 상태(토큰 폐기 · nonce)와 실시간 신호에 쓴다",
+      "id": 24,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(lettuce_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "명령 / 초",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(lettuce_seconds_sum{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) / sum(rate(lettuce_seconds_count{cluster=\"$cluster\",job=\"orbit-server\"}[5m]))",
+          "legendFormat": "평균 지연",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "명령 / 초"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "평균 지연"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "실시간 (SSE)",
+      "id": 25,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "실시간 연결 수",
+      "description": "파드당 상한 1,000. 700(70%)을 5분 넘으면 알림",
+      "id": 26,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 54
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client) (realtime_connections{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "{{client}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 700,
+                "color": "orange"
+              },
+              {
+                "value": 1000,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "연결 열림 · 닫힘 · 거절",
+      "description": "분당 건수. 거절이 보이면 상한에 닿은 것",
+      "id": 27,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 54
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(realtime_connections_opened_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "열림",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(realtime_connections_closed_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "닫힘",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(realtime_connections_rejected_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "거절",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "신호 발행 · 수신",
+      "description": "분당 건수. 발행은 있는데 수신이 0이면 Redis 구독이 끊긴 것",
+      "id": 28,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 54
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(realtime_signals_published_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "발행 {{result}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (result) (rate(realtime_signals_received_total{cluster=\"$cluster\",job=\"orbit-server\"}[5m])) * 60",
+          "legendFormat": "수신 {{result}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "min(realtime_subscription_listening{cluster=\"$cluster\",job=\"orbit-server\"})",
+          "legendFormat": "구독 중 (1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "노드 (EC2 t4g.medium)",
+      "id": 29,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU 사용률",
+      "description": "90%를 10분 넘으면 알림. t4g는 오래 쓰면 크레딧 초과 요금",
+      "id": 30,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 63
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{cluster=\"$cluster\",mode=\"idle\"}[5m]))",
+          "legendFormat": "사용률",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 0.9,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "메모리",
+      "description": "여유가 10% 아래로 10분이면 알림",
+      "id": 31,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 63
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(node_memory_MemTotal_bytes{cluster=\"$cluster\"}) - sum(node_memory_MemAvailable_bytes{cluster=\"$cluster\"})",
+          "legendFormat": "사용",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(node_memory_MemTotal_bytes{cluster=\"$cluster\"})",
+          "legendFormat": "전체",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "sum(node_memory_SwapTotal_bytes{cluster=\"$cluster\"}) - sum(node_memory_SwapFree_bytes{cluster=\"$cluster\"})",
+          "legendFormat": "스왑 사용",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "전체"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "디스크 사용률 (/)",
+      "description": "80% 넘으면 알림. 대개 쌓인 이미지 → crictl rmi --prune",
+      "id": 32,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 63
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - node_filesystem_avail_bytes{cluster=\"$cluster\",mountpoint=\"/\"} / node_filesystem_size_bytes{cluster=\"$cluster\",mountpoint=\"/\"}",
+          "legendFormat": "사용률",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 0.8,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "네트워크",
+      "description": "",
+      "id": 33,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 71
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(node_network_receive_bytes_total{cluster=\"$cluster\",device!~\"lo|veth.*|cni.*|flannel.*\"}[5m]))",
+          "legendFormat": "받음",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(node_network_transmit_bytes_total{cluster=\"$cluster\",device!~\"lo|veth.*|cni.*|flannel.*\"}[5m]))",
+          "legendFormat": "보냄",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "디스크 I/O",
+      "description": "",
+      "id": 34,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 71
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(node_disk_read_bytes_total{cluster=\"$cluster\"}[5m]))",
+          "legendFormat": "읽기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(node_disk_written_bytes_total{cluster=\"$cluster\"}[5m]))",
+          "legendFormat": "쓰기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "자원 압박 · OOM",
+      "description": "작업이 자원을 기다린 시간 비율(PSI). OOM kill은 건수 (나면 알림)",
+      "id": 35,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 71
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(node_pressure_cpu_waiting_seconds_total{cluster=\"$cluster\"}[5m])",
+          "legendFormat": "CPU 대기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "rate(node_pressure_memory_waiting_seconds_total{cluster=\"$cluster\"}[5m])",
+          "legendFormat": "메모리 대기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "rate(node_pressure_io_waiting_seconds_total{cluster=\"$cluster\"}[5m])",
+          "legendFormat": "I/O 대기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "increase(node_vmstat_oom_kill{cluster=\"$cluster\"}[5m])",
+          "legendFormat": "OOM kill (5분)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "OOM kill (5분)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "쿠버네티스 · 배포",
+      "id": 36,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "컨테이너별 메모리 (상위 8)",
+      "description": "노드 메모리를 누가 쓰는지",
+      "id": 37,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 80
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(8, sum by (namespace, container) (container_memory_working_set_bytes{cluster=\"$cluster\",container!=\"\"}))",
+          "legendFormat": "{{namespace}}/{{container}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "재시작 (1시간 단위)",
+      "description": "재시작 이유는 아래 표 · kubectl describe",
+      "id": 38,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 80
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace, container) (increase(kube_pod_container_status_restarts_total{cluster=\"$cluster\"}[1h])) > 0",
+          "legendFormat": "{{namespace}}/{{container}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Argo CD 앱",
+      "description": "모두 Synced · Healthy면 정상",
+      "id": 39,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 88
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (name, sync_status, health_status) (argocd_app_info{cluster=\"$cluster\"})",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "renameByName": {
+              "name": "앱",
+              "sync_status": "동기화",
+              "health_status": "상태"
+            },
+            "indexByName": {
+              "name": 0,
+              "sync_status": 1,
+              "health_status": 2
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "동기화"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Synced": {
+                        "color": "green"
+                      },
+                      "Healthy": {
+                        "color": "green"
+                      },
+                      "Progressing": {
+                        "color": "blue"
+                      },
+                      "OutOfSync": {
+                        "color": "orange"
+                      },
+                      "Degraded": {
+                        "color": "red"
+                      },
+                      "Missing": {
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "상태"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Synced": {
+                        "color": "green"
+                      },
+                      "Healthy": {
+                        "color": "green"
+                      },
+                      "Progressing": {
+                        "color": "blue"
+                      },
+                      "OutOfSync": {
+                        "color": "orange"
+                      },
+                      "Degraded": {
+                        "color": "red"
+                      },
+                      "Missing": {
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "문제 있는 컨테이너",
+      "description": "대기 중(CrashLoopBackOff · ImagePullBackOff)이거나 마지막 종료 이유(OOMKilled · Error)가 남은 컨테이너. 비어 있으면 정상",
+      "id": 40,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 88
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (namespace, pod, container, reason) (kube_pod_container_status_waiting_reason{cluster=\"$cluster\"}) > 0",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (namespace, pod, container, reason) (kube_pod_container_status_last_terminated_reason{cluster=\"$cluster\"}) > 0",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #A": true,
+              "Value #B": true
+            },
+            "renameByName": {
+              "namespace": "네임스페이스",
+              "pod": "Pod",
+              "container": "컨테이너",
+              "reason": "이유"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "row",
+      "title": "로그",
+      "id": 41,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 96
+      },
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "orbit-server 오류 · 경고 로그",
+      "description": "최신순. 전체 로그는 Explore → logs. 이메일 · 전화번호 · 토큰은 가려져 있다",
+      "id": 42,
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 97
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{cluster=\"$cluster\", namespace=\"orbit-dev\", container=\"app\"} |~ \" (ERROR|WARN) \"",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          },
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      }
+    }
+  ]
+}
