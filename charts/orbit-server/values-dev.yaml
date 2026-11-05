@@ -1,6 +1,6 @@
 env: dev
 # server 레포 deploy-dev가 develop 빌드 후 이 줄을 커밋으로 바꾼다 → Argo CD가 반영 (직접 고치지 않는다)
-image: { tag: 3b7fa9597c0225aac8f51514646e508a69a66ba9 }   # 측정 ⓐ(캐시 도입 전) 중, 끝나면 8c8112a로 되돌린다 (HM-281)
+image: { tag: 8c8112addffc21012e90f87557dc7a0bc9d4044d }
 # server의 dev 프로필(HM-351): 배포 공통(deployed) + Swagger 켬 · 앱 로그 DEBUG · 임시 어댑터 허용
 # 그래서 Swagger · 로그 · 지표 environment 태그를 환경 변수로 덮어쓰지 않는다
 springProfile: dev
@@ -13,4 +13,4 @@ rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com
 serviceMonitor: { enabled: true }   # 12-4. /actuator/prometheus 무인증 공개(server HM-339) 전에는 타깃이 401로 DOWN
 swaggerAuth: { enabled: true }      # dev는 Swagger가 켜져 있다 → 기본 인증 (사용자 orbit, /orbit/dev/SWAGGER_PASSWORD)
-redisCache: { enabled: false }   # 진행 보드 캐시 (server HM-281). 측정 비교 때 false로 캐시만 끈다 — 측정 ⓑ(캐시 끔) 중, 끝나면 true로 되돌린다
+redisCache: { enabled: true }   # 진행 보드 캐시 (server HM-281). 측정 비교 때 false로 캐시만 끈다
