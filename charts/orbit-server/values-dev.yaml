@@ -13,4 +13,4 @@ rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
 host: dev-api.orbi-t.com
 serviceMonitor: { enabled: true }   # 12-4. /actuator/prometheus 무인증 공개(server HM-339) 전에는 타깃이 401로 DOWN
 swaggerAuth: { enabled: true }      # dev는 Swagger가 켜져 있다 → 기본 인증 (사용자 orbit, /orbit/dev/SWAGGER_PASSWORD)
-redisCache: { enabled: true }   # 진행 보드 캐시 (server HM-281). 측정 비교 때 false로 캐시만 끈다
+redisCache: { enabled: false }   # 진행 보드 캐시 (server HM-281). 측정 비교 때 false로 캐시만 끈다 — 측정 ⓑ(캐시 끔) 중, 끝나면 true로 되돌린다
