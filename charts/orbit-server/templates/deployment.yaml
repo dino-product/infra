@@ -30,6 +30,11 @@ spec:
             - { name: REDIS_HOST, value: redis }
             - { name: REDIS_PORT, value: "6379" }
             - { name: JAVA_OPTS, value: {{ .Values.javaOpts | quote }} }
+            {{- if .Values.redisCache.enabled }}
+            - { name: BOARD_CACHE_ENABLED, value: "true" }
+            - { name: BOARD_CACHE_REDIS_HOST, value: redis-cache }
+            - { name: BOARD_CACHE_REDIS_PORT, value: "6379" }
+            {{- end }}
             {{- range $k, $v := .Values.extraEnv }}
             - { name: {{ $k }}, value: {{ $v | quote }} }
             {{- end }}

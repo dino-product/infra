@@ -48,3 +48,7 @@ serviceMonitor: { enabled: false }
 swaggerAuth: { enabled: false }   # Swagger를 켠 환경(dev)에서 기본 인증
 redis:
   persistence: false # 14단계 prod에서 true ( AOF + PVC )
+# 캐시 전용 Redis (templates/redis-cache.yaml). 켜면 서버에 BOARD_CACHE_* 환경 변수가 들어가 진행 보드 캐시가 켜진다
+# 끄면(기본) 서버는 캐시 없이 DB로만 조회한다. 되돌릴 때는 환경별 values에서 false로 (서버 재배포 불필요, 파드 1회 교체)
+# maxmemory: 평소 예상 약 3.5MB(발주사 50 × 조회 기간 3 × 23KB). 서버가 조직당 기간 8개 · 값 256KB 상한을 둔다
+redisCache: { enabled: false, maxmemory: 32mb }
