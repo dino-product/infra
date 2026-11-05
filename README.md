@@ -37,7 +37,7 @@ Orbit 백엔드([dino-product/server](https://github.com/dino-product/server))�
 2. **CloudFront**: TLS 종료, 캐시 없음, 원본 확인용 헤더를 붙여 노드로
 3. **노드 보안 그룹**: CloudFront에서 오는 요청만 받는다
 4. **Traefik**: Host와 원본 헤더를 확인하고 라우팅
-5. **orbit-server**: 인증 확인 → Redis → RDS
+5. **orbit-server**: 인증 확인 → Redis → RDS. 진행 보드는 캐시 전용 Redis(`redis-cache`, allkeys-lru)를 먼저 보고, 없으면 RDS에서 만든다
 
 </details>
 
