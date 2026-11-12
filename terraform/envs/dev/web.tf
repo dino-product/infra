@@ -15,6 +15,10 @@ module "web" {
   api_origin    = "https://dev-api.orbi-t.com"
   media_bucket  = module.media.bucket
   force_destroy = true
+
+  # 작업 등록 주소 검색(카카오 우편번호 서비스): 로더 스크립트 + 팝업 안 검색 화면 iframe
+  extra_script_src = ["https://t1.kakaocdn.net"]
+  extra_frame_src  = ["https://postcode.map.kakao.com"]
 }
 
 # 처음엔 이 파일에 직접 있던 리소스 → 모듈로 옮김 (재생성 없이)

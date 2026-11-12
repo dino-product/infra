@@ -15,6 +15,10 @@ module "web" {
   ]
   api_origin   = "https://api.orbi-t.com"
   media_bucket = "orbit-media-prod-${data.aws_caller_identity.current.account_id}" # 14단계 module "media" 가 만들 이름
+
+  # 작업 등록 주소 검색(카카오 우편번호 서비스): 로더 스크립트 + 팝업 안 검색 화면 iframe
+  extra_script_src = ["https://t1.kakaocdn.net"]
+  extra_frame_src  = ["https://postcode.map.kakao.com"]
 }
 
 data "aws_caller_identity" "current" {}
