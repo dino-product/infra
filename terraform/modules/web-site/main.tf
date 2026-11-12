@@ -40,6 +40,12 @@ variable "extra_script_src" {
   description = "CSP script-src 에 더할 출처 (카카오 SDK 등). 기본은 'self' 만"
 }
 
+variable "extra_frame_src" {
+  type        = list(string)
+  default     = []
+  description = "CSP frame-src 에 더할 출처 (카카오 우편번호 검색 화면 등). 팝업으로 연 about:blank 창도 이 CSP 를 물려받는다"
+}
+
 variable "force_destroy" {
   type        = bool
   default     = false
@@ -56,6 +62,7 @@ locals {
   csp = join("; ", [
     "default-src 'self'",
     "script-src ${join(" ", concat(["'self'"], var.extra_script_src))}",
+    "frame-src ${join(" ", concat(["'self'"], var.extra_frame_src))}",
     "style-src 'self' 'unsafe-inline'", # React style 속성 (인라인 스타일 93곳)
     "img-src 'self' data: blob: ${local.media_url}",
     "font-src 'self' data:",
