@@ -14,3 +14,6 @@ host: dev-api.orbi-t.com
 serviceMonitor: { enabled: true }   # 12-4. /actuator/prometheus 무인증 공개(server HM-339) 전에는 타깃이 401로 DOWN
 swaggerAuth: { enabled: true }      # dev는 Swagger가 켜져 있다 → 기본 인증 (사용자 orbit, /orbit/dev/SWAGGER_PASSWORD)
 redisCache: { enabled: true }   # 진행 보드 캐시 (server HM-281). 측정 비교 때 false로 캐시만 끈다
+# 기사 앱 푸시 FCM (server HM-279 · HM-189). 값은 SSM /orbit/dev/FCM_*에 손으로 넣었다 (서비스 계정 키는 base64)
+# FCM_ENABLED=true면 서버가 시작할 때 키를 검사해 틀리면 뜨지 않는다. 끌 때는 SSM 값을 false로 바꾸고 Pod를 재시작한다
+envSecretKeys: [FCM_ENABLED, FCM_CREDENTIALS, FCM_TIMEOUT]

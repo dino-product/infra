@@ -47,6 +47,9 @@ tfParamKeys:
   - MEDIA_BUCKET
   - MEDIA_REGION
   - MEDIA_RETENTION_MAX_DAYS
+# 환경별로만 넣는 비밀 값 (/orbit/<env>/<이름>, 손으로 넣은 SecureString). 환경별 values에서 채운다
+#   그 env의 SSM에 값을 먼저 넣고 이 목록을 main에 올린다. 거꾸로면 ExternalSecret이 실패한다
+envSecretKeys: []
 host: ""
 serviceMonitor: { enabled: false }
 swaggerAuth: { enabled: false }   # Swagger를 켠 환경(dev)에서 기본 인증
