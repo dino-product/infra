@@ -5,6 +5,7 @@
 #   - 값을 바꿀 때: aws ssm put-parameter --name /orbit/dev/<이름> --type SecureString --value '…' --overwrite
 #   - 카카오 · Apple · 도메인 값은 임시 값으로 넣는다. 앱이 시작할 때 형식만 검사하므로 뜨는 데는 문제없고, 10단계에서 고친다
 #   - terraform 소유 값(ORIGIN_VERIFY · MEDIA_* · GRAFANA_CLOUD_* · ARGOCD_* · SWAGGER_* · DATABASE_RO/RW_PASSWORD)은 여기서 넣지 않는다 (envs/<env> · modules/media-bucket · shared)
+#   - 환경별 값(차트 envSecretKeys, 예: dev FCM_*)도 여기서 넣지 않는다. 실제 키라 aws ssm put-parameter로 손으로 넣는다
 set -euo pipefail
 
 ENV=${1:?"dev 또는 prod를 인자로 주세요"}
